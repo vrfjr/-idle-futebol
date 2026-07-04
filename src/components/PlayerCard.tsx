@@ -1,11 +1,11 @@
-import React from "react";
+import React, { ReactNode } from "react";
 import { Player } from "../types";
 import { RARITY } from "../constants/rarity";
 import { colors, radii, withAlpha } from "../styles/tokens";
 
 interface Props {
   player:Player; compact?:boolean;
-  onAction?:()=>void; actionLabel?:string; actionColor?:string;
+  onAction?:()=>void; actionLabel?:ReactNode; actionColor?:string;
 }
 
 export function PlayerCard({player,compact=false,onAction,actionLabel,actionColor=colors.success}:Props) {

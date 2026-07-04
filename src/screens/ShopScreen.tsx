@@ -1,4 +1,5 @@
 import React from "react";
+import { Gem } from "lucide-react";
 import { useGame } from "../store/GameContext";
 import { BUY_PACK } from "../store/actions";
 import { makePlayer } from "../utils/gameLogic";
@@ -25,7 +26,7 @@ export function ShopScreen({onToast}:Props) {
     <Screen>
       <div style={{fontSize:17,fontWeight:900,color:colors.textHeading,letterSpacing:-0.3,marginBottom:4}}>Loja</div>
       <div style={{background:colors.surface,border:`1px solid ${withAlpha(colors.primary,"soft")}`,borderRadius:radii.card,padding:"12px 14px",marginBottom:16,display:"flex",alignItems:"center",gap:10}}>
-        <span style={{fontSize:24}}>💎</span>
+        <Gem size={24} color={colors.primaryLight}/>
         <div>
           <div style={{...type.eyebrow,color:colors.textMuted}}>SEU SALDO</div>
           <div style={{fontSize:24,fontWeight:900,color:colors.primaryLight,letterSpacing:-0.5,lineHeight:1}}>
@@ -49,7 +50,7 @@ export function ShopScreen({onToast}:Props) {
                 </div>
               </div>
               <Button onClick={()=>doBuyPack(pk)} color={canAfford?pk.accent:colors.textMuted} active={canAfford} size="md">
-                💎 {pk.cost}
+                <span style={{display:"inline-flex",alignItems:"center",gap:4}}><Gem size={13}/> {pk.cost}</span>
               </Button>
             </div>
           </AccentCard>

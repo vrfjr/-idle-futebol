@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { CircleDot, Users, ShoppingCart, Gem, TrendingUp, LucideIcon } from "lucide-react";
 import { GameProvider } from "./store/GameContext";
 import { usePassiveIncome } from "./hooks/usePassiveIncome";
 import { MatchScreen } from "./screens/MatchScreen";
@@ -12,12 +13,12 @@ import "./index.css";
 
 type Tab = "match"|"team"|"market"|"shop"|"upgrades";
 
-const NAV:{key:Tab;icon:string;label:string}[] = [
-  {key:"match",    icon:"⚽", label:"Partida"},
-  {key:"team",     icon:"👥", label:"Time"},
-  {key:"market",   icon:"🛒", label:"Mercado"},
-  {key:"shop",     icon:"💎", label:"Loja"},
-  {key:"upgrades", icon:"⬆", label:"Upgrades"},
+const NAV:{key:Tab;icon:LucideIcon;label:string}[] = [
+  {key:"match",    icon:CircleDot,    label:"Partida"},
+  {key:"team",     icon:Users,        label:"Time"},
+  {key:"market",   icon:ShoppingCart, label:"Mercado"},
+  {key:"shop",     icon:Gem,          label:"Loja"},
+  {key:"upgrades", icon:TrendingUp,   label:"Upgrades"},
 ];
 
 // Inner component that can use context hooks
@@ -50,10 +51,11 @@ function GameApp() {
       <nav style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,background:"#040a16",borderTop:"1px solid #0e1830",display:"flex",zIndex:200,padding:"0 6px"}}>
         {NAV.map(n=>{
           const active=tab===n.key;
+          const Icon = n.icon;
           return (
             <button key={n.key} onClick={()=>setTab(n.key)} style={{flex:1,padding:"10px 0 8px",border:"none",cursor:"pointer",background:"none",display:"flex",flexDirection:"column",alignItems:"center",gap:3,position:"relative"}}>
               {active&&<div style={{position:"absolute",top:0,left:"20%",right:"20%",height:2,background:colors.primary,borderRadius:"0 0 2px 2px"}}/>}
-              <span style={{fontSize:16,lineHeight:1,opacity:active?1:0.35}}>{n.icon}</span>
+              <Icon size={16} color={active?colors.primaryLight:colors.textMuted} strokeWidth={active?2.25:1.75}/>
               <span style={{fontSize:8,fontWeight:700,letterSpacing:0.8,color:active?colors.primaryLight:colors.textMuted,fontFamily:"'Rajdhani',sans-serif",textTransform:"uppercase"}}>{n.label}</span>
             </button>
           );

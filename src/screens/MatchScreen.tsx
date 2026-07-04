@@ -1,4 +1,5 @@
 import React, { useRef, useCallback } from "react";
+import { Coins, Zap, CircleDot, Circle, Tv, Gem } from "lucide-react";
 import { useGame } from "../store/GameContext";
 import { useMatchSimulation } from "../hooks/useMatchSimulation";
 import { useGameLoop } from "../hooks/useGameLoop";
@@ -49,17 +50,17 @@ export function MatchScreen({onToast}:Props) {
         </div>
         <div style={{display:"flex",gap:6}}>
           <div style={{flex:2}}>
-            <StatPill label="MOEDAS" value={fmt(state.coins)} color={colors.warning} icon={<span style={{fontSize:14}}>💰</span>}/>
+            <StatPill label="MOEDAS" value={fmt(state.coins)} color={colors.warning} icon={<Coins size={16} color={colors.warning}/>}/>
           </div>
           <div style={{flex:1}}>
-            <StatPill label="/SEG" value={pps} color={colors.success} icon={<span style={{fontSize:14}}>⚡</span>}/>
+            <StatPill label="/SEG" value={pps} color={colors.success} icon={<Zap size={16} color={colors.success}/>}/>
           </div>
         </div>
       </div>
 
       <div style={{margin:"0 14px 12px",background:colors.surface,border:`1px solid ${colors.border}`,borderRadius:12,padding:"12px 20px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
         <div style={{textAlign:"center"}}>
-          <div style={{width:38,height:38,borderRadius:radii.badge,background:withAlpha(colors.primary,"soft"),border:`1px solid ${withAlpha(colors.primary,"medium")}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,marginBottom:4}}>⚽</div>
+          <div style={{width:38,height:38,borderRadius:radii.badge,background:withAlpha(colors.primary,"soft"),border:`1px solid ${withAlpha(colors.primary,"medium")}`,display:"flex",alignItems:"center",justifyContent:"center",marginBottom:4}}><CircleDot size={18} color={colors.primary}/></div>
           <div style={{fontSize:8,color:colors.primary,fontWeight:700,letterSpacing:0.8}}>MEU TIME</div>
         </div>
         <div style={{textAlign:"center"}}>
@@ -75,7 +76,7 @@ export function MatchScreen({onToast}:Props) {
           </div>
         </div>
         <div style={{textAlign:"center"}}>
-          <div style={{width:38,height:38,borderRadius:radii.badge,background:withAlpha(colors.rivalDark,"soft"),border:`1px solid ${withAlpha(colors.rivalDark,"medium")}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,marginBottom:4}}>🔴</div>
+          <div style={{width:38,height:38,borderRadius:radii.badge,background:withAlpha(colors.rivalDark,"soft"),border:`1px solid ${withAlpha(colors.rivalDark,"medium")}`,display:"flex",alignItems:"center",justifyContent:"center",marginBottom:4}}><Circle size={18} color={colors.rivalDark} fill={colors.rivalDark}/></div>
           <div style={{fontSize:8,color:colors.rivalDark,fontWeight:700,letterSpacing:0.8}}>RIVAL</div>
         </div>
       </div>
@@ -95,8 +96,10 @@ export function MatchScreen({onToast}:Props) {
           style={{width:"100%",padding:11,borderRadius:9,cursor:"pointer",background:"#0a1628",
             border:`1px solid ${withAlpha(colors.primary,"border")}`,color:colors.primaryLight,fontSize:12,fontWeight:700,fontFamily:"inherit",
             letterSpacing:0.5,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
-          <span style={{fontSize:14}}>📺</span>
-          <span>Assistir anúncio → +600 💰 +3 💎</span>
+          <Tv size={16}/>
+          <span style={{display:"inline-flex",alignItems:"center",gap:4}}>
+            Assistir anúncio → +600 <Coins size={13}/> +3 <Gem size={13}/>
+          </span>
         </button>
       </div>
     </div>
