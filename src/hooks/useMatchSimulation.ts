@@ -1,5 +1,6 @@
 import { useEffect, RefObject } from "react";
 import { fieldLayout } from "../constants/formations";
+import { colors } from "../styles/tokens";
 
 interface SimAgent { x:number;y:number;bx:number;by:number;num:number;isHome:boolean;hasBall:boolean; }
 interface Sim {
@@ -118,8 +119,8 @@ export function useMatchSimulation(
         ctx.fillStyle="rgba(255,255,255,0.9)";ctx.font="bold 6px monospace";
         ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(String(p.num),p.x,p.y+0.5);
       };
-      sim.home.forEach(p=>drawP(p,"#1d4ed8","#93c5fd"));
-      sim.away.forEach(p=>drawP(p,"#991b1b","#fca5a5"));
+      sim.home.forEach(p=>drawP(p,colors.primary,colors.primaryLight));
+      sim.away.forEach(p=>drawP(p,colors.rivalDark,"#fca5a5"));
       ctx.fillStyle="#f5f5f5";ctx.beginPath();ctx.arc(ball.x,ball.y,5,0,Math.PI*2);ctx.fill();
       ctx.strokeStyle="#333";ctx.lineWidth=0.6;ctx.stroke();
 

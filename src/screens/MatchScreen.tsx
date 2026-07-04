@@ -6,6 +6,7 @@ import { calcPower, passivePerSec } from "../utils/balance";
 import { fmt } from "../utils/helpers";
 import { ADD_REWARD } from "../store/actions";
 import { StatPill } from "../components/StatPill";
+import { colors, radii, withAlpha } from "../styles/tokens";
 
 interface Props { onToast:(msg:string,bad?:boolean)=>void; }
 
@@ -25,69 +26,69 @@ export function MatchScreen({onToast}:Props) {
 
   return (
     <div>
-      <div style={{padding:"16px 16px 12px",background:"#070d1a"}}>
+      <div style={{padding:"16px 16px 12px",background:colors.bg}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
           <div>
-            <div style={{fontSize:9,color:"#2d3f5c",fontWeight:700,letterSpacing:1.5}}>TEMPORADA</div>
-            <div style={{fontSize:22,fontWeight:900,color:"#fbbf24",letterSpacing:-0.5,lineHeight:1}}>Liga {state.league}</div>
+            <div style={{fontSize:9,color:colors.textMuted,fontWeight:700,letterSpacing:1.5}}>TEMPORADA</div>
+            <div style={{fontSize:22,fontWeight:900,color:colors.warning,letterSpacing:-0.5,lineHeight:1}}>Liga {state.league}</div>
           </div>
           <div style={{textAlign:"center"}}>
-            <div style={{fontSize:9,color:"#2d3f5c",fontWeight:700,letterSpacing:1.5}}>PODER</div>
-            <div style={{fontSize:28,fontWeight:900,color:"#4ade80",letterSpacing:-1,lineHeight:1}}>{pwr}</div>
+            <div style={{fontSize:9,color:colors.textMuted,fontWeight:700,letterSpacing:1.5}}>PODER</div>
+            <div style={{fontSize:28,fontWeight:900,color:colors.success,letterSpacing:-1,lineHeight:1}}>{pwr}</div>
           </div>
           <div style={{textAlign:"right"}}>
-            <div style={{fontSize:9,color:"#2d3f5c",fontWeight:700,letterSpacing:1.5}}>V / E / D</div>
+            <div style={{fontSize:9,color:colors.textMuted,fontWeight:700,letterSpacing:1.5}}>V / E / D</div>
             <div style={{fontSize:16,fontWeight:800,letterSpacing:1,marginTop:1}}>
-              <span style={{color:"#4ade80"}}>{state.wins}</span>
-              <span style={{color:"#1e293b",margin:"0 3px"}}>/</span>
-              <span style={{color:"#fbbf24"}}>{state.draws}</span>
-              <span style={{color:"#1e293b",margin:"0 3px"}}>/</span>
-              <span style={{color:"#f87171"}}>{state.losses}</span>
+              <span style={{color:colors.success}}>{state.wins}</span>
+              <span style={{color:colors.textSeparator,margin:"0 3px"}}>/</span>
+              <span style={{color:colors.warning}}>{state.draws}</span>
+              <span style={{color:colors.textSeparator,margin:"0 3px"}}>/</span>
+              <span style={{color:colors.danger}}>{state.losses}</span>
             </div>
           </div>
         </div>
         <div style={{display:"flex",gap:6}}>
-          <div style={{flex:2,background:"#0a1120",border:"1px solid #151f35",borderRadius:8,padding:"7px 12px",display:"flex",alignItems:"center",gap:8}}>
+          <div style={{flex:2,background:colors.surface,border:`1px solid ${colors.border}`,borderRadius:radii.badge,padding:"7px 12px",display:"flex",alignItems:"center",gap:8}}>
             <span style={{fontSize:14}}>💰</span>
             <div>
-              <div style={{fontSize:8,color:"#2d3f5c",fontWeight:700,letterSpacing:1}}>MOEDAS</div>
-              <div style={{fontSize:15,fontWeight:900,color:"#fbbf24",letterSpacing:-0.3}}>{fmt(state.coins)}</div>
+              <div style={{fontSize:8,color:colors.textMuted,fontWeight:700,letterSpacing:1}}>MOEDAS</div>
+              <div style={{fontSize:15,fontWeight:900,color:colors.warning,letterSpacing:-0.3}}>{fmt(state.coins)}</div>
             </div>
           </div>
-          <div style={{flex:1,background:"#0a1120",border:"1px solid #151f35",borderRadius:8,padding:"7px 12px",display:"flex",alignItems:"center",gap:8}}>
+          <div style={{flex:1,background:colors.surface,border:`1px solid ${colors.border}`,borderRadius:radii.badge,padding:"7px 12px",display:"flex",alignItems:"center",gap:8}}>
             <span style={{fontSize:14}}>⚡</span>
             <div>
-              <div style={{fontSize:8,color:"#2d3f5c",fontWeight:700,letterSpacing:1}}>/SEG</div>
-              <div style={{fontSize:15,fontWeight:900,color:"#34d399",letterSpacing:-0.3}}>{pps}</div>
+              <div style={{fontSize:8,color:colors.textMuted,fontWeight:700,letterSpacing:1}}>/SEG</div>
+              <div style={{fontSize:15,fontWeight:900,color:colors.success,letterSpacing:-0.3}}>{pps}</div>
             </div>
           </div>
         </div>
       </div>
 
-      <div style={{margin:"0 14px 12px",background:"#090f1e",border:"1px solid #131e33",borderRadius:12,padding:"12px 20px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+      <div style={{margin:"0 14px 12px",background:colors.surface,border:`1px solid ${colors.border}`,borderRadius:12,padding:"12px 20px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
         <div style={{textAlign:"center"}}>
-          <div style={{width:38,height:38,borderRadius:8,background:"#1d4ed820",border:"1px solid #1d4ed840",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,marginBottom:4}}>⚽</div>
-          <div style={{fontSize:8,color:"#1d4ed8",fontWeight:700,letterSpacing:0.8}}>MEU TIME</div>
+          <div style={{width:38,height:38,borderRadius:radii.badge,background:withAlpha(colors.primary,"soft"),border:`1px solid ${withAlpha(colors.primary,"medium")}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,marginBottom:4}}>⚽</div>
+          <div style={{fontSize:8,color:colors.primary,fontWeight:700,letterSpacing:0.8}}>MEU TIME</div>
         </div>
         <div style={{textAlign:"center"}}>
-          <div style={{fontSize:8,color:"#2d3f5c",fontWeight:700,letterSpacing:1,marginBottom:4}}>{liveScore.min<90?`${liveScore.min}'`:"FIM"}</div>
+          <div style={{fontSize:8,color:colors.textMuted,fontWeight:700,letterSpacing:1,marginBottom:4}}>{liveScore.min<90?`${liveScore.min}'`:"FIM"}</div>
           <div style={{fontSize:40,fontWeight:900,letterSpacing:8,lineHeight:1}}>
-            <span style={{color:"#e2e8f0"}}>{liveScore.home}</span>
-            <span style={{color:"#1a2540",margin:"0 2px"}}>:</span>
-            <span style={{color:"#e2e8f0"}}>{liveScore.away}</span>
+            <span style={{color:colors.textHeading}}>{liveScore.home}</span>
+            <span style={{color:colors.textSeparator,margin:"0 2px"}}>:</span>
+            <span style={{color:colors.textHeading}}>{liveScore.away}</span>
           </div>
-          <div style={{fontSize:7,color:"#22c55e",fontWeight:700,letterSpacing:2,marginTop:4,display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
-            <span style={{display:"inline-block",width:5,height:5,borderRadius:"50%",background:"#22c55e",animation:"pulse 1.5s infinite"}}/>
+          <div style={{fontSize:7,color:colors.success,fontWeight:700,letterSpacing:2,marginTop:4,display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
+            <span style={{display:"inline-block",width:5,height:5,borderRadius:"50%",background:colors.success,animation:"pulse 1.5s infinite"}}/>
             AO VIVO
           </div>
         </div>
         <div style={{textAlign:"center"}}>
-          <div style={{width:38,height:38,borderRadius:8,background:"#99182020",border:"1px solid #99182040",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,marginBottom:4}}>🔴</div>
-          <div style={{fontSize:8,color:"#991b1b",fontWeight:700,letterSpacing:0.8}}>RIVAL</div>
+          <div style={{width:38,height:38,borderRadius:radii.badge,background:withAlpha(colors.rivalDark,"soft"),border:`1px solid ${withAlpha(colors.rivalDark,"medium")}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,marginBottom:4}}>🔴</div>
+          <div style={{fontSize:8,color:colors.rivalDark,fontWeight:700,letterSpacing:0.8}}>RIVAL</div>
         </div>
       </div>
 
-      <div style={{margin:"0 14px 10px",borderRadius:12,overflow:"hidden",border:"1px solid #131e33"}}>
+      <div style={{margin:"0 14px 10px",borderRadius:12,overflow:"hidden",border:`1px solid ${colors.border}`}}>
         <canvas ref={canvasRef} width={356} height={218} style={{display:"block",width:"100%",height:"auto"}}/>
       </div>
 
@@ -100,7 +101,7 @@ export function MatchScreen({onToast}:Props) {
       <div style={{margin:"0 14px 14px"}}>
         <button onClick={()=>{dispatch({type:ADD_REWARD,coins:600,diamonds:3});onToast("+600 moedas e +3 diamantes");}}
           style={{width:"100%",padding:11,borderRadius:9,cursor:"pointer",background:"#0a1628",
-            border:"1px solid #1d4ed830",color:"#60a5fa",fontSize:12,fontWeight:700,fontFamily:"inherit",
+            border:`1px solid ${withAlpha(colors.primary,"border")}`,color:colors.primaryLight,fontSize:12,fontWeight:700,fontFamily:"inherit",
             letterSpacing:0.5,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
           <span style={{fontSize:14}}>📺</span>
           <span>Assistir anúncio → +600 💰 +3 💎</span>

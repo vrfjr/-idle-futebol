@@ -7,6 +7,7 @@ import { MarketScreen } from "./screens/MarketScreen";
 import { ShopScreen } from "./screens/ShopScreen";
 import { UpgradesScreen } from "./screens/UpgradesScreen";
 import { Toast } from "./components/Toast";
+import { colors } from "./styles/tokens";
 import "./index.css";
 
 type Tab = "match"|"team"|"market"|"shop"|"upgrades";
@@ -33,8 +34,8 @@ function GameApp() {
   };
 
   return (
-    <div style={{background:"#070d1a",minHeight:"100vh",maxWidth:430,margin:"0 auto",
-      fontFamily:"'Rajdhani',sans-serif",color:"#e2e8f0",position:"relative",display:"flex",flexDirection:"column"}}>
+    <div style={{background:colors.bg,minHeight:"100vh",maxWidth:430,margin:"0 auto",
+      fontFamily:"'Rajdhani',sans-serif",color:colors.textHeading,position:"relative",display:"flex",flexDirection:"column"}}>
 
       {toast && <Toast msg={toast.msg} bad={toast.bad}/>}
 
@@ -51,9 +52,9 @@ function GameApp() {
           const active=tab===n.key;
           return (
             <button key={n.key} onClick={()=>setTab(n.key)} style={{flex:1,padding:"10px 0 8px",border:"none",cursor:"pointer",background:"none",display:"flex",flexDirection:"column",alignItems:"center",gap:3,position:"relative"}}>
-              {active&&<div style={{position:"absolute",top:0,left:"20%",right:"20%",height:2,background:"#1d4ed8",borderRadius:"0 0 2px 2px"}}/>}
+              {active&&<div style={{position:"absolute",top:0,left:"20%",right:"20%",height:2,background:colors.primary,borderRadius:"0 0 2px 2px"}}/>}
               <span style={{fontSize:16,lineHeight:1,opacity:active?1:0.35}}>{n.icon}</span>
-              <span style={{fontSize:8,fontWeight:700,letterSpacing:0.8,color:active?"#60a5fa":"#2d3f5c",fontFamily:"'Rajdhani',sans-serif",textTransform:"uppercase"}}>{n.label}</span>
+              <span style={{fontSize:8,fontWeight:700,letterSpacing:0.8,color:active?colors.primaryLight:colors.textMuted,fontFamily:"'Rajdhani',sans-serif",textTransform:"uppercase"}}>{n.label}</span>
             </button>
           );
         })}
