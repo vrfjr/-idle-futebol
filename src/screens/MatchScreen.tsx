@@ -48,19 +48,11 @@ export function MatchScreen({onToast}:Props) {
           </div>
         </div>
         <div style={{display:"flex",gap:6}}>
-          <div style={{flex:2,background:colors.surface,border:`1px solid ${colors.border}`,borderRadius:radii.badge,padding:"7px 12px",display:"flex",alignItems:"center",gap:8}}>
-            <span style={{fontSize:14}}>💰</span>
-            <div>
-              <div style={{fontSize:8,color:colors.textMuted,fontWeight:700,letterSpacing:1}}>MOEDAS</div>
-              <div style={{fontSize:15,fontWeight:900,color:colors.warning,letterSpacing:-0.3}}>{fmt(state.coins)}</div>
-            </div>
+          <div style={{flex:2}}>
+            <StatPill label="MOEDAS" value={fmt(state.coins)} color={colors.warning} icon={<span style={{fontSize:14}}>💰</span>}/>
           </div>
-          <div style={{flex:1,background:colors.surface,border:`1px solid ${colors.border}`,borderRadius:radii.badge,padding:"7px 12px",display:"flex",alignItems:"center",gap:8}}>
-            <span style={{fontSize:14}}>⚡</span>
-            <div>
-              <div style={{fontSize:8,color:colors.textMuted,fontWeight:700,letterSpacing:1}}>/SEG</div>
-              <div style={{fontSize:15,fontWeight:900,color:colors.success,letterSpacing:-0.3}}>{pps}</div>
-            </div>
+          <div style={{flex:1}}>
+            <StatPill label="/SEG" value={pps} color={colors.success} icon={<span style={{fontSize:14}}>⚡</span>}/>
           </div>
         </div>
       </div>

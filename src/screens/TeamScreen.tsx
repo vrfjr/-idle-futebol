@@ -5,6 +5,8 @@ import { calcPower } from "../utils/balance";
 import { FORMATIONS_LIST } from "../constants/formations";
 import { FormationKey } from "../types";
 import { PlayerCard } from "../components/PlayerCard";
+import { Label } from "../components/Label";
+import { Screen } from "../components/Screen";
 import { colors, radii, withAlpha } from "../styles/tokens";
 
 interface Props { onToast:(msg:string,bad?:boolean)=>void; }
@@ -20,14 +22,10 @@ export function TeamScreen({onToast}:Props) {
     dispatch({type:TOGGLE_SQUAD, player});
   };
 
-  const SLabel = ({children,color=colors.textMuted}:{children:React.ReactNode;color?:string})=>(
-    <div style={{fontSize:9,color,fontWeight:700,letterSpacing:1.5,marginBottom:8}}>{children}</div>
-  );
-
   return (
-    <div style={{padding:"16px 14px 8px"}}>
+    <Screen>
       <div style={{fontSize:17,fontWeight:900,color:colors.textHeading,letterSpacing:-0.3,marginBottom:14}}>Time</div>
-      <SLabel>FORMAÇÃO</SLabel>
+      <Label>FORMAÇÃO</Label>
       <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:14}}>
         {FORMATIONS_LIST.map(f=>(
           <button key={f} onClick={()=>dispatch({type:SET_FORMATION,formation:f as FormationKey})} style={{
@@ -53,19 +51,19 @@ export function TeamScreen({onToast}:Props) {
           </div>
         </div>
       </div>
-      <SLabel color={withAlpha(colors.success,"medium")}>EM CAMPO — {state.lineup.length}/11</SLabel>
+      <Label color={withAlpha(colors.success,"medium")}>EM CAMPO — {state.lineup.length}/11</Label>
       <div style={{display:"flex",flexDirection:"column",gap:5,marginBottom:16}}>
         {state.lineup.map(p=>(
           <PlayerCard key={p.id} player={p} compact onAction={()=>toggleSquad(p)} actionLabel="Retirar" actionColor={colors.danger}/>
         ))}
         {!state.lineup.length&&<div style={{textAlign:"center",color:colors.textMuted,padding:"18px 0",fontSize:12}}>Nenhum jogador escalado</div>}
       </div>
-      <SLabel>BANCO — {bench.length}</SLabel>
+      <Label>BANCO — {bench.length}</Label>
       <div style={{display:"flex",flexDirection:"column",gap:5}}>
         {bench.map(p=>(
           <PlayerCard key={p.id} player={p} compact onAction={()=>toggleSquad(p)} actionLabel="Escalar" actionColor={colors.success}/>
         ))}
       </div>
-    </div>
+    </Screen>
   );
 }

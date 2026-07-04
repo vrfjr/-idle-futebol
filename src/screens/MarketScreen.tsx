@@ -4,6 +4,8 @@ import { BUY_PLAYER, SELL_PLAYER, REFRESH_MARKET } from "../store/actions";
 import { makePlayer } from "../utils/gameLogic";
 import { fmt } from "../utils/helpers";
 import { PlayerCard } from "../components/PlayerCard";
+import { Label } from "../components/Label";
+import { Screen } from "../components/Screen";
 import { colors, radii, withAlpha } from "../styles/tokens";
 
 interface Props { onToast:(msg:string,bad?:boolean)=>void; }
@@ -28,26 +30,22 @@ export function MarketScreen({onToast}:Props) {
     onToast("Mercado atualizado");
   };
 
-  const SLabel=({children,color=colors.textMuted}:{children:React.ReactNode;color?:string})=>(
-    <div style={{fontSize:9,color,fontWeight:700,letterSpacing:1.5,marginBottom:8}}>{children}</div>
-  );
-
   return (
-    <div style={{padding:"16px 14px 8px"}}>
+    <Screen>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
         <div style={{fontSize:17,fontWeight:900,color:colors.textHeading,letterSpacing:-0.3}}>Mercado</div>
         <button onClick={doRefresh} style={{background:"transparent",border:`1px solid ${colors.border}`,borderRadius:radii.button,color:colors.textSecondary,fontSize:11,fontWeight:700,cursor:"pointer",padding:"6px 12px",fontFamily:"inherit",letterSpacing:0.3}}>
           Atualizar — 300 💰
         </button>
       </div>
-      <SLabel>DISPONÍVEIS</SLabel>
+      <Label>DISPONÍVEIS</Label>
       <div style={{display:"flex",flexDirection:"column",gap:7,marginBottom:20}}>
         {state.market.map((p:any)=>(
           <PlayerCard key={p.id} player={p} onAction={()=>doBuy(p)}
             actionLabel={`${fmt(p.price)} 💰`} actionColor={state.coins>=p.price?colors.success:"#374151"}/>
         ))}
       </div>
-      <SLabel color={withAlpha(colors.danger,"medium")}>VENDER DO ELENCO</SLabel>
+      <Label color={withAlpha(colors.danger,"medium")}>VENDER DO ELENCO</Label>
       <div style={{display:"flex",flexDirection:"column",gap:5}}>
         {state.roster.map((p:any)=>(
           <PlayerCard key={p.id} player={p} compact onAction={()=>doSell(p)}
@@ -55,6 +53,6 @@ export function MarketScreen({onToast}:Props) {
         ))}
         {!state.roster.length&&<div style={{textAlign:"center",color:colors.textMuted,padding:"18px 0",fontSize:12}}>Elenco vazio</div>}
       </div>
-    </div>
+    </Screen>
   );
 }

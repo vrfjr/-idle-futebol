@@ -5,6 +5,10 @@ import { UPGRADES_DEF } from "../constants/upgrades";
 import { upgCost } from "../utils/balance";
 import { fmt } from "../utils/helpers";
 import { UpgradeKey } from "../types";
+import { AccentCard } from "../components/AccentCard";
+import { ProgressBar } from "../components/ProgressBar";
+import { Button } from "../components/Button";
+import { Screen } from "../components/Screen";
 import { colors, radii, withAlpha } from "../styles/tokens";
 
 interface Props { onToast:(msg:string,bad?:boolean)=>void; }
@@ -19,7 +23,7 @@ export function UpgradesScreen({onToast}:Props) {
   };
 
   return (
-    <div style={{padding:"16px 14px 8px"}}>
+    <Screen>
       <div style={{fontSize:17,fontWeight:900,color:colors.textHeading,letterSpacing:-0.3,marginBottom:4}}>Upgrades</div>
       <div style={{fontSize:11,color:colors.textMuted,marginBottom:14}}>
         Saldo: <span style={{color:colors.warning,fontWeight:700}}>💰 {fmt(state.coins)}</span>
@@ -29,7 +33,7 @@ export function UpgradesScreen({onToast}:Props) {
         const cost=upgCost(lvl);
         const canAfford=state.coins>=cost;
         return (
-          <div key={u.key} style={{background:colors.surface,border:`1px solid ${withAlpha(u.color,"subtle")}`,borderLeft:`3px solid ${withAlpha(u.color,"strong")}`,borderRadius:radii.card,padding:"13px 14px",marginBottom:8}}>
+          <AccentCard key={u.key} accent={u.color}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
               <div>
                 <div style={{fontSize:14,fontWeight:800,color:colors.textHeading,letterSpacing:0.2}}>{u.label}</div>
@@ -37,15 +41,15 @@ export function UpgradesScreen({onToast}:Props) {
               </div>
               <div style={{width:36,height:36,borderRadius:radii.badge,background:withAlpha(u.color,"subtle"),border:`1px solid ${withAlpha(u.color,"border")}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:900,color:u.color}}>{lvl}</div>
             </div>
-            <div style={{background:colors.border,borderRadius:radii.tag,height:3,marginBottom:10,overflow:"hidden"}}>
-              <div style={{background:u.color,height:"100%",borderRadius:radii.tag,width:`${Math.min(100,(lvl/25)*100)}%`,transition:"width .4s",opacity:0.7}}/>
+            <div style={{marginBottom:10}}>
+              <ProgressBar value={(lvl/25)*100} color={u.color}/>
             </div>
-            <button onClick={()=>doUpgrade(u.key)} style={{width:"100%",padding:9,borderRadius:radii.button,cursor:"pointer",fontFamily:"inherit",background:canAfford?withAlpha(u.color,"subtle"):"transparent",border:`1px solid ${canAfford?withAlpha(u.color,"medium"):colors.border}`,color:canAfford?u.color:colors.textMuted,fontSize:12,fontWeight:800,letterSpacing:0.5}}>
+            <Button onClick={()=>doUpgrade(u.key)} color={canAfford?u.color:colors.textMuted} active={canAfford} fullWidth size="md">
               Melhorar — {fmt(cost)} 💰
-            </button>
-          </div>
+            </Button>
+          </AccentCard>
         );
       })}
-    </div>
+    </Screen>
   );
 }
