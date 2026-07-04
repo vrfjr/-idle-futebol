@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { LazyMotion, m, AnimatePresence } from "framer-motion";
 import { CircleDot, Users, ShoppingCart, Gem, TrendingUp, LucideIcon } from "lucide-react";
 import { GameProvider } from "./store/GameContext";
 import { usePassiveIncome } from "./hooks/usePassiveIncome";
@@ -10,6 +11,8 @@ import { UpgradesScreen } from "./screens/UpgradesScreen";
 import { Toast } from "./components/Toast";
 import { colors } from "./styles/tokens";
 import "./index.css";
+
+const loadFeatures = () => import("framer-motion").then(mod => mod.domAnimation);
 
 type Tab = "match"|"team"|"market"|"shop"|"upgrades";
 
@@ -35,33 +38,41 @@ function GameApp() {
   };
 
   return (
-    <div style={{background:colors.bg,minHeight:"100vh",maxWidth:430,margin:"0 auto",
-      fontFamily:"'Rajdhani',sans-serif",color:colors.textHeading,position:"relative",display:"flex",flexDirection:"column"}}>
+    <LazyMotion features={loadFeatures} strict>
+      <div style={{background:colors.bg,minHeight:"100vh",maxWidth:430,margin:"0 auto",
+        fontFamily:"'Rajdhani',sans-serif",color:colors.textHeading,position:"relative",display:"flex",flexDirection:"column"}}>
 
-      {toast && <Toast msg={toast.msg} bad={toast.bad}/>}
+        <AnimatePresence>
+          {toast && <Toast key="toast" msg={toast.msg} bad={toast.bad}/>}
+        </AnimatePresence>
 
-      <div style={{flex:1,overflowY:"auto",paddingBottom:66}}>
-        {tab==="match"    && <MatchScreen    onToast={notify}/>}
-        {tab==="team"     && <TeamScreen     onToast={notify}/>}
-        {tab==="market"   && <MarketScreen   onToast={notify}/>}
-        {tab==="shop"     && <ShopScreen     onToast={notify}/>}
-        {tab==="upgrades" && <UpgradesScreen onToast={notify}/>}
+        <div style={{flex:1,overflowY:"auto",paddingBottom:66}}>
+          <AnimatePresence mode="wait">
+            <m.div key={tab} initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-8}} transition={{duration:0.18}}>
+              {tab==="match"    && <MatchScreen    onToast={notify}/>}
+              {tab==="team"     && <TeamScreen     onToast={notify}/>}
+              {tab==="market"   && <MarketScreen   onToast={notify}/>}
+              {tab==="shop"     && <ShopScreen     onToast={notify}/>}
+              {tab==="upgrades" && <UpgradesScreen onToast={notify}/>}
+            </m.div>
+          </AnimatePresence>
+        </div>
+
+        <nav style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,background:"#040a16",borderTop:"1px solid #0e1830",display:"flex",zIndex:200,padding:"0 6px"}}>
+          {NAV.map(n=>{
+            const active=tab===n.key;
+            const Icon = n.icon;
+            return (
+              <button key={n.key} onClick={()=>setTab(n.key)} style={{flex:1,padding:"10px 0 8px",border:"none",cursor:"pointer",background:"none",display:"flex",flexDirection:"column",alignItems:"center",gap:3,position:"relative"}}>
+                {active&&<div style={{position:"absolute",top:0,left:"20%",right:"20%",height:2,background:colors.primary,borderRadius:"0 0 2px 2px"}}/>}
+                <Icon size={16} color={active?colors.primaryLight:colors.textMuted} strokeWidth={active?2.25:1.75}/>
+                <span style={{fontSize:8,fontWeight:700,letterSpacing:0.8,color:active?colors.primaryLight:colors.textMuted,fontFamily:"'Rajdhani',sans-serif",textTransform:"uppercase"}}>{n.label}</span>
+              </button>
+            );
+          })}
+        </nav>
       </div>
-
-      <nav style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,background:"#040a16",borderTop:"1px solid #0e1830",display:"flex",zIndex:200,padding:"0 6px"}}>
-        {NAV.map(n=>{
-          const active=tab===n.key;
-          const Icon = n.icon;
-          return (
-            <button key={n.key} onClick={()=>setTab(n.key)} style={{flex:1,padding:"10px 0 8px",border:"none",cursor:"pointer",background:"none",display:"flex",flexDirection:"column",alignItems:"center",gap:3,position:"relative"}}>
-              {active&&<div style={{position:"absolute",top:0,left:"20%",right:"20%",height:2,background:colors.primary,borderRadius:"0 0 2px 2px"}}/>}
-              <Icon size={16} color={active?colors.primaryLight:colors.textMuted} strokeWidth={active?2.25:1.75}/>
-              <span style={{fontSize:8,fontWeight:700,letterSpacing:0.8,color:active?colors.primaryLight:colors.textMuted,fontFamily:"'Rajdhani',sans-serif",textTransform:"uppercase"}}>{n.label}</span>
-            </button>
-          );
-        })}
-      </nav>
-    </div>
+    </LazyMotion>
   );
 }
 
