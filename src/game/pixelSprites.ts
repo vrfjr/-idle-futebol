@@ -24,7 +24,23 @@ const LEG_IDLE = [
   "........",
 ];
 
-const PLAYER_FRAME = [...BODY, ...LEG_IDLE];
+const LEG_RUN1 = [
+  ".OB..BO.",
+  ".OB..BO.",
+  "OK....KO",
+  "........",
+];
+
+const LEG_RUN2 = [
+  "..OBBO..",
+  ".OB..BO.",
+  "OK....KO",
+  ".O....O.",
+];
+
+export const RUN_FRAME_COUNT = 3;
+const LEG_FRAMES = [LEG_IDLE, LEG_RUN1, LEG_RUN2];
+const PLAYER_FRAMES = LEG_FRAMES.map(legs=>[...BODY, ...legs]);
 
 const BALL_FRAME = [
   "..OO..",
@@ -64,11 +80,11 @@ function textureFromCanvas(canvas:HTMLCanvasElement): Texture {
 const playerTextureCache = new Map<string, Texture>();
 let ballTexture: Texture | null = null;
 
-export function getPlayerTexture(jerseyColor:string): Texture {
-  const key = jerseyColor;
+export function getPlayerTexture(jerseyColor:string, frame=0): Texture {
+  const key = `${jerseyColor}:${frame}`;
   let tex = playerTextureCache.get(key);
   if(!tex){
-    tex = textureFromCanvas(rasterize(PLAYER_FRAME, basePalette(jerseyColor)));
+    tex = textureFromCanvas(rasterize(PLAYER_FRAMES[frame], basePalette(jerseyColor)));
     playerTextureCache.set(key, tex);
   }
   return tex;

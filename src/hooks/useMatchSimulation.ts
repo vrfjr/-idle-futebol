@@ -1,7 +1,7 @@
 import { useEffect, RefObject } from "react";
 import { Application, Graphics, Sprite, Text, TextStyle } from "pixi.js";
 import { createSim, stepSimulation, Sim } from "../game/matchSim";
-import { getPlayerTexture, getBallTexture, SPRITE_SCALE } from "../game/pixelSprites";
+import { getPlayerTexture, getBallTexture, SPRITE_SCALE, RUN_FRAME_COUNT } from "../game/pixelSprites";
 import { colors } from "../styles/tokens";
 
 const W = 356, H = 218;
@@ -72,6 +72,11 @@ export function useMatchSimulation(
       awaySprites.forEach(s=>app.stage.addChild(s));
 
       const allAgents = [...sim.home, ...sim.away];
+      const allSprites = [...homeSprites, ...awaySprites];
+      const allJersey = allAgents.map((_,i)=> i<sim.home.length ? colors.primary : colors.rivalDark);
+      const prevX = allAgents.map(p=>p.x);
+      const prevY = allAgents.map(p=>p.y);
+
       const rings = allAgents.map((_,i)=>{
         const isHome = i < sim.home.length;
         const g = new Graphics().circle(0,0,10).stroke({width:1.5,color:isHome?colors.primaryLight:"#fca5a5"});
@@ -104,6 +109,11 @@ export function useMatchSimulation(
         allAgents.forEach((p,i)=>{
           rings[i].position.set(p.x,p.y);
           rings[i].visible = p.hasBall;
+
+          const moved = Math.hypot(p.x-prevX[i], p.y-prevY[i]) > 0.15;
+          const frame = moved ? 1 + (Math.floor(sim.frame/8)%(RUN_FRAME_COUNT-1)) : 0;
+          allSprites[i].texture = getPlayerTexture(allJersey[i], frame);
+          prevX[i] = p.x; prevY[i] = p.y;
         });
         ballSprite.position.set(sim.ball.x, sim.ball.y);
 
