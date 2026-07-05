@@ -70,7 +70,7 @@ function GameApp() {
           borderBottom:`1px solid ${withAlpha(colors.cyan,"soft")}`,boxShadow:shadows.panel}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
             <div style={{minWidth:0}}>
-              <div style={{fontSize:9,color:colors.cyan,fontWeight:900,letterSpacing:1.3,textTransform:"uppercase"}}>Football Idle Manager</div>
+              <div style={{fontSize:9,color:colors.cyan,fontWeight:900,letterSpacing:1.3,textTransform:"uppercase"}}>Idle Football Manager</div>
               <div style={{fontSize:18,color:colors.textHeading,fontWeight:900,letterSpacing:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
                 {state.teamName}
               </div>

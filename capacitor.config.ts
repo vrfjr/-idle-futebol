@@ -2,7 +2,7 @@ import { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
   appId: "com.vagnerfjr.footballidle",
-  appName: "Football Idle",
+  appName: "Idle Football Manager",
   webDir: "build",
   server: {
     androidScheme: "https",
