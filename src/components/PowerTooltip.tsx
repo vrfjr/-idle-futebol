@@ -1,5 +1,6 @@
 import React, { ReactNode, useState } from "react";
 import { PowerBreakdown } from "../utils/balance";
+import { ALL_POSITIONS } from "../utils/lineup";
 import { colors, radii, shadows, withAlpha } from "../styles/tokens";
 
 interface Props {
@@ -46,7 +47,7 @@ export function PowerTooltip({breakdown, children, align="center"}:Props) {
           </div>
           <div style={{height:1,background:colors.border,margin:"8px 0"}}/>
           <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-            {(["GOL","ZAG","MEI","ATA"] as const).map(pos=>(
+            {ALL_POSITIONS.filter(pos=>breakdown.targets[pos]>0).map(pos=>(
               <span key={pos} style={{fontSize:9,color:colors.textMuted,background:withAlpha(colors.primaryLight,"subtle"),
                 borderRadius:radii.tag,padding:"2px 5px",fontWeight:800}}>
                 {pos} {breakdown.counts[pos]}/{breakdown.targets[pos]}

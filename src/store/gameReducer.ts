@@ -11,11 +11,12 @@ import { calculateOfflineIncome } from "../utils/offlineIncome";
 export const PLAYER_TEAM_ID = "player";
 const DEFAULT_TEAM_NAME = "Meu Time";
 const DEFAULT_TEAM_COLOR = "#1d4ed8";
+// Covers exactly the 11 roles a 4-3-3 needs, plus a 3-player bench.
 const STARTER_POSITIONS: Player["pos"][] = [
   "GOL", "GOL",
-  "ZAG", "ZAG", "ZAG", "ZAG", "ZAG",
-  "MEI", "MEI", "MEI", "MEI",
-  "ATA", "ATA", "ATA",
+  "ZAG", "ZAG", "LD", "LE",
+  "VOL", "MC", "MC", "MEI",
+  "PD", "PE", "SA", "CA",
 ];
 const STARTER_ROSTER_SIZE = STARTER_POSITIONS.length;
 const STARTER_LINEUP_SIZE = 11;

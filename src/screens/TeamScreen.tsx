@@ -6,7 +6,7 @@ import { SET_FORMATION, SET_LINEUP, SET_TEAM_IDENTITY, TOGGLE_SQUAD } from "../s
 import { calcPowerBreakdown } from "../utils/balance";
 import { fieldLayout, FORMATIONS_LIST } from "../constants/formations";
 import { FormationKey, Player, PositionKey, RarityKey } from "../types";
-import { AssignedFieldSlot, assignPlayersToSlots, pickBalancedLineup, positionStatus, validateLineup } from "../utils/lineup";
+import { ALL_POSITIONS, AssignedFieldSlot, assignPlayersToSlots, pickBalancedLineup, positionStatus, validateLineup } from "../utils/lineup";
 import { PlayerCard } from "../components/PlayerCard";
 import { GameButton } from "../components/GameButton";
 import { Label } from "../components/Label";
@@ -19,7 +19,7 @@ const TEAM_COLORS = [
   "#ea580c", "#0891b2", "#db2777", "#ca8a04",
 ];
 
-const POS_FILTERS: (PositionKey|"TODOS")[] = ["TODOS","GOL","ZAG","MEI","ATA"];
+const POS_FILTERS: (PositionKey|"TODOS")[] = ["TODOS", ...ALL_POSITIONS];
 const RARITY_FILTERS: (RarityKey|"TODAS")[] = ["TODAS","common","rare","epic","legendary"];
 const RARITY_LABEL: Record<RarityKey|"TODAS", string> = {
   TODAS:"Todas", common:"Comum", rare:"Raro", epic:"Epico", legendary:"Lendario",

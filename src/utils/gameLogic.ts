@@ -2,7 +2,7 @@ import { Player, RarityKey, PositionKey, MatchResult } from "../types";
 import { RARITY } from "../constants/rarity";
 import { POSITION_WEIGHTS } from "../constants/positions";
 import { freshName } from "./helpers";
-const POSITIONS: PositionKey[] = ["GOL","ZAG","MEI","ATA"];
+const POSITIONS: PositionKey[] = ["GOL","ZAG","LD","LE","VOL","MC","MEI","PD","PE","SA","CA"];
 let _idSeed = 0;
 
 function clampTier(tier:number): number {
@@ -14,7 +14,7 @@ export function makePlayer(forced?: RarityKey, forcedPosition?: PositionKey): Pl
   const rarity: RarityKey = forced ?? (r<3?"legendary":r<15?"epic":r<40?"rare":"common");
   const m = RARITY[rarity].mult;
   const s = () => Math.min(99, Math.floor(22+Math.random()*22*m));
-  const pos = forcedPosition ?? POSITIONS[Math.floor(Math.random()*4)];
+  const pos = forcedPosition ?? POSITIONS[Math.floor(Math.random()*POSITIONS.length)];
   const pac=s(), sho=s(), pas=s(), def=s(), phy=s(), dri=s();
   const w = POSITION_WEIGHTS[pos];
   const ovr = Math.floor(pac*w.pac + sho*w.sho + pas*w.pas + def*w.def + phy*w.phy + dri*w.dri);

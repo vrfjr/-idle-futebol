@@ -1,5 +1,5 @@
 import { createInitialState } from "../store/gameReducer";
-import { saveGame } from "./storage";
+import { KEY, saveGame } from "./storage";
 
 describe("storage", () => {
   beforeEach(() => {
@@ -18,7 +18,7 @@ describe("storage", () => {
       pendingOfflineReward: {coins:100, seconds:10, capped:false, reason:"ok"},
     });
 
-    const raw = localStorage.getItem("football_idle_v2");
+    const raw = localStorage.getItem(KEY);
     expect(raw).not.toBeNull();
 
     const saved = JSON.parse(raw!);

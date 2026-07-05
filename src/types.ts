@@ -1,5 +1,6 @@
 export type RarityKey = "common" | "rare" | "epic" | "legendary";
-export type PositionKey = "GOL" | "ZAG" | "MEI" | "ATA";
+export type PositionKey =
+  | "GOL" | "ZAG" | "LD" | "LE" | "VOL" | "MC" | "MEI" | "PD" | "PE" | "SA" | "CA";
 export type FormationKey = "4-3-3" | "4-4-2" | "3-5-2" | "4-2-3-1" | "5-3-2";
 export type UpgradeKey = "attack" | "defense" | "training" | "fans";
 export type MatchResult = "win" | "draw" | "loss";

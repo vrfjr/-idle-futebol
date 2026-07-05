@@ -100,10 +100,17 @@ const POS_DEFAULTS: Record<
   PositionKey,
   Pick<SimAgent, "pac" | "sho" | "pas" | "def" | "phy" | "dri" | "ovr">
 > = {
-  GOL: { pac: 34, sho: 8, pas: 30, def: 56, phy: 52, dri: 20, ovr: 44 },
+  GOL: { pac: 34, sho: 8,  pas: 30, def: 56, phy: 52, dri: 20, ovr: 44 },
   ZAG: { pac: 42, sho: 14, pas: 34, def: 52, phy: 52, dri: 28, ovr: 42 },
-  MEI: { pac: 46, sho: 36, pas: 52, def: 34, phy: 42, dri: 48, ovr: 43 },
-  ATA: { pac: 54, sho: 52, pas: 34, def: 18, phy: 42, dri: 48, ovr: 44 },
+  LD:  { pac: 48, sho: 16, pas: 40, def: 42, phy: 40, dri: 36, ovr: 41 },
+  LE:  { pac: 48, sho: 16, pas: 40, def: 42, phy: 40, dri: 36, ovr: 41 },
+  VOL: { pac: 42, sho: 18, pas: 44, def: 46, phy: 46, dri: 32, ovr: 42 },
+  MC:  { pac: 44, sho: 24, pas: 48, def: 34, phy: 38, dri: 38, ovr: 42 },
+  MEI: { pac: 46, sho: 36, pas: 48, def: 22, phy: 32, dri: 44, ovr: 43 },
+  PD:  { pac: 54, sho: 38, pas: 36, def: 16, phy: 32, dri: 46, ovr: 43 },
+  PE:  { pac: 54, sho: 38, pas: 36, def: 16, phy: 32, dri: 46, ovr: 43 },
+  SA:  { pac: 50, sho: 44, pas: 38, def: 16, phy: 36, dri: 42, ovr: 43 },
+  CA:  { pac: 52, sho: 52, pas: 30, def: 14, phy: 44, dri: 40, ovr: 44 },
 };
 
 function clamp(v: number, min: number, max: number): number {
@@ -420,8 +427,11 @@ function attackTarget(
   const openDistance = nearestDistance(opponents, p.x, p.y);
   const openness = clamp(openDistance / (W * 0.12), 0, 1);
 
+  // TEMP (Etapa 1 compile fix): broadened from the old single "ATA" role to the
+  // new forward positions — Etapa 2 replaces this whole function with the
+  // POSITION_PROFILES-driven version.
   if (
-    p.pos === "ATA" &&
+    (p.pos === "CA" || p.pos === "SA" || p.pos === "PD" || p.pos === "PE") &&
     aheadOfCarrier &&
     openness > 0.42
   ) {
@@ -579,7 +589,11 @@ function bestPassChoice(
     const laneRisk = passLaneRisk(carrier, target, opponents);
     const idealDistance = W * lerp(0.14, 0.28, tactics.directness);
     const distanceFit = 1 - clamp(Math.abs(distance - idealDistance) / (W * 0.26), 0, 1);
-    const roleBonus = target.pos === "ATA" ? 0.10 : target.pos === "MEI" ? 0.06 : 0;
+    // TEMP (Etapa 1 compile fix): broadened role buckets — Etapa 2 replaces this
+    // with per-position profile data instead of a hardcoded bonus list.
+    const forwardRole = target.pos === "CA" || target.pos === "SA" || target.pos === "PD" || target.pos === "PE";
+    const creativeRole = target.pos === "MEI" || target.pos === "MC";
+    const roleBonus = forwardRole ? 0.10 : creativeRole ? 0.06 : 0;
     const backwardPenalty = progressGain < -0.03 ? Math.abs(progressGain) * 1.5 : 0;
     const directnessWeight = lerp(1.25, 2.5, tactics.directness);
 

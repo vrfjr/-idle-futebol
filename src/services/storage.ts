@@ -1,8 +1,9 @@
 import { GameState } from "../types";
-// Bumped from v1: GameState shape changed (league:number -> league:LeagueState,
-// Player stats reshaped, teamName/teamColor added) — old saves are intentionally
-// orphaned rather than migrated (no real users yet, pre-launch).
-const KEY = "football_idle_v2";
+// Bumped from v2: PositionKey expanded from 4 to 11 roles (Player.pos values
+// like "MEI"/"ATA" now mean something different) — old saves are intentionally
+// orphaned rather than migrated (no real users yet, pre-launch; same practice
+// used for the v1->v2 bump).
+export const KEY = "football_idle_v3";
 
 // Set right before an intentional wipe (e.g. the "reset game" button) so that
 // no autosave — the 3s interval or the visibilitychange handler, which the
