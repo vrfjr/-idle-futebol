@@ -1,8 +1,14 @@
 import { GameState, FormationKey } from "../types";
 import { GameAction, PASSIVE_INCOME, BUY_PLAYER, SELL_PLAYER, TOGGLE_SQUAD,
-  UPGRADE, REFRESH_MARKET, BUY_PACK, ADD_REWARD, SET_FORMATION, MATCH_RESULT, LOAD } from "./actions";
+  UPGRADE, REFRESH_MARKET, BUY_PACK, ADD_REWARD, SET_FORMATION, RESOLVE_ROUND,
+  SET_TEAM_IDENTITY, LOAD } from "./actions";
 import { makePlayer } from "../utils/gameLogic";
 import { upgCost } from "../utils/balance";
+import { startNewSeason } from "../utils/league";
+
+export const PLAYER_TEAM_ID = "player";
+const DEFAULT_TEAM_NAME = "Meu Time";
+const DEFAULT_TEAM_COLOR = "#1d4ed8";
 
 // FIX: factory function so makePlayer() runs lazily at app start, not at import time
 export function createInitialState(): GameState {
@@ -16,7 +22,8 @@ export function createInitialState(): GameState {
     roster, lineup: roster.slice(0,7),
     formation: "4-3-3",
     upgrades: {attack:0, defense:0, training:0, fans:0},
-    wins:0, losses:0, draws:0, league:1,
+    teamName: DEFAULT_TEAM_NAME, teamColor: DEFAULT_TEAM_COLOR,
+    league: startNewSeason(1, {id:PLAYER_TEAM_ID, name:DEFAULT_TEAM_NAME, color:DEFAULT_TEAM_COLOR}),
     market: Array.from({length:6}, ()=>makePlayer()),
     passiveRate: 10,
   };
@@ -91,18 +98,24 @@ export function gameReducer(state:GameState, action:GameAction): GameState {
     case SET_FORMATION:
       return {...state, formation: action.formation as FormationKey};
 
-    case MATCH_RESULT: {
-      const nW = state.wins+(action.result==="win"?1:0);
-      const nL = state.losses+(action.result==="loss"?1:0);
-      const nD = state.draws+(action.result==="draw"?1:0);
+    case RESOLVE_ROUND:
       return {
         ...state,
         coins: state.coins+action.reward,
         diamonds: state.diamonds+action.diamondReward,
-        wins:nW, losses:nL, draws:nD,
-        league: Math.max(1, Math.floor(nW/5)+1),
+        league: action.league,
       };
-    }
+
+    case SET_TEAM_IDENTITY:
+      return {
+        ...state,
+        teamName: action.name,
+        teamColor: action.color,
+        league: {
+          ...state.league,
+          teams: state.league.teams.map(t=>t.isPlayer ? {...t, name:action.name, color:action.color} : t),
+        },
+      };
 
     case LOAD:
       // FIX: merge with initialState defaults so missing fields in saved data don't break the game

@@ -24,6 +24,8 @@ export function MatchScreen({onToast,onNavigateShop}:Props) {
 
   const pwr = calcPower(state.lineup, state.formation, state.upgrades);
   const pps = passivePerSec(state.passiveRate, state.upgrades.fans);
+  const playerTeamId = state.league.teams.find(t=>t.isPlayer)?.id;
+  const playerRow = state.league.table.find(r=>r.teamId===playerTeamId);
 
   return (
     <div>
@@ -31,7 +33,7 @@ export function MatchScreen({onToast,onNavigateShop}:Props) {
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
           <div>
             <div style={{fontSize:9,color:colors.textMuted,fontWeight:700,letterSpacing:1.5,display:"flex",alignItems:"center",gap:4}}><Trophy size={10}/> TEMPORADA</div>
-            <div style={{fontSize:22,fontWeight:900,color:colors.warning,letterSpacing:-0.5,lineHeight:1}}>Liga {state.league}</div>
+            <div style={{fontSize:22,fontWeight:900,color:colors.warning,letterSpacing:-0.5,lineHeight:1}}>Liga {state.league.tier}</div>
           </div>
           <div style={{textAlign:"center"}}>
             <div style={{fontSize:9,color:colors.textMuted,fontWeight:700,letterSpacing:1.5,display:"flex",alignItems:"center",justifyContent:"center",gap:4}}><Zap size={10}/> PODER</div>
@@ -40,11 +42,11 @@ export function MatchScreen({onToast,onNavigateShop}:Props) {
           <div style={{textAlign:"right"}}>
             <div style={{fontSize:9,color:colors.textMuted,fontWeight:700,letterSpacing:1.5,display:"flex",alignItems:"center",justifyContent:"flex-end",gap:4}}><BarChart3 size={10}/> V / E / D</div>
             <div style={{fontSize:16,fontWeight:800,letterSpacing:1,marginTop:1}}>
-              <span style={{color:colors.success}}>{state.wins}</span>
+              <span style={{color:colors.success}}>{playerRow?.won ?? 0}</span>
               <span style={{color:colors.textSeparator,margin:"0 3px"}}>/</span>
-              <span style={{color:colors.warning}}>{state.draws}</span>
+              <span style={{color:colors.warning}}>{playerRow?.drawn ?? 0}</span>
               <span style={{color:colors.textSeparator,margin:"0 3px"}}>/</span>
-              <span style={{color:colors.danger}}>{state.losses}</span>
+              <span style={{color:colors.danger}}>{playerRow?.lost ?? 0}</span>
             </div>
           </div>
         </div>

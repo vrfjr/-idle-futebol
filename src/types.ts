@@ -27,6 +27,38 @@ export interface Upgrades {
   fans: number;
 }
 
+export interface LeagueTeam {
+  id: string;
+  name: string;
+  color: string;
+  power: number;
+  isPlayer: boolean;
+}
+
+export interface StandingRow {
+  teamId: string;
+  played: number;
+  won: number;
+  drawn: number;
+  lost: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  points: number;
+}
+
+export interface Fixture {
+  home: string;
+  away: string;
+}
+
+export interface LeagueState {
+  tier: number;
+  round: number;
+  teams: LeagueTeam[];
+  table: StandingRow[];
+  fixtures: Fixture[][];
+}
+
 export interface GameState {
   coins: number;
   diamonds: number;
@@ -34,10 +66,9 @@ export interface GameState {
   lineup: Player[];
   formation: FormationKey;
   upgrades: Upgrades;
-  wins: number;
-  losses: number;
-  draws: number;
-  league: number;
+  teamName: string;
+  teamColor: string;
+  league: LeagueState;
   market: Player[];
   passiveRate: number;
 }

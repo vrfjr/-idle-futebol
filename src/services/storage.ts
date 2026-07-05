@@ -1,5 +1,8 @@
 import { GameState } from "../types";
-const KEY = "football_idle_v1";
+// Bumped from v1: GameState shape changed (league:number -> league:LeagueState,
+// Player stats reshaped, teamName/teamColor added) — old saves are intentionally
+// orphaned rather than migrated (no real users yet, pre-launch).
+const KEY = "football_idle_v2";
 
 // Simple serialization with error handling
 export async function saveGame(data: GameState): Promise<void> {
