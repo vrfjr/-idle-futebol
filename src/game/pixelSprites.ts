@@ -40,8 +40,24 @@ const LEG_RUN2 = [
   ".O....O.",
 ];
 
+const LEG_KICK = [
+  "..OBBO..",
+  "..OB..OK",
+  "..OK...K",
+  "........",
+];
+
+const LEG_TACKLE = [
+  ".OB..BO.",
+  "OB....BO",
+  "K......K",
+  "........",
+];
+
 export const RUN_FRAME_COUNT = 3;
-const LEG_FRAMES = [LEG_IDLE, LEG_RUN1, LEG_RUN2];
+export const FRAME_KICK = 3;
+export const FRAME_TACKLE = 4;
+const LEG_FRAMES = [LEG_IDLE, LEG_RUN1, LEG_RUN2, LEG_KICK, LEG_TACKLE];
 const PLAYER_FRAMES = LEG_FRAMES.map(legs=>[...BODY, ...legs]);
 
 const BALL_FRAME = [
