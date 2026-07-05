@@ -1,6 +1,4 @@
 node_modules
 build
-android
 *.keystore
-android/local.properties
 claude-skills
