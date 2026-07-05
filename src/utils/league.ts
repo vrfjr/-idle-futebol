@@ -13,6 +13,8 @@ const CPU_COLORS = [
   "#dc2626", "#059669", "#7c3aed", "#ea580c", "#0891b2", "#ca8a04",
   "#db2777", "#4338ca", "#16a34a", "#9333ea",
 ];
+export const BEST_LEAGUE_TIER = 1;
+export const STARTING_LEAGUE_TIER = 25;
 
 function shuffle<T>(arr:T[]): T[] {
   const a = arr.slice();
@@ -24,7 +26,9 @@ function shuffle<T>(arr:T[]): T[] {
 }
 
 export function basePower(tier:number): number {
-  return 45 + (tier-1)*9;
+  const clamped = Math.max(BEST_LEAGUE_TIER, Math.min(STARTING_LEAGUE_TIER, Math.round(tier)));
+  const prestige = STARTING_LEAGUE_TIER + 1 - clamped;
+  return 34 + prestige*3.5;
 }
 
 export function makeCpuTeams(tier:number, count=17): LeagueTeam[] {
@@ -66,13 +70,14 @@ function emptyRow(teamId:string): StandingRow {
 }
 
 export function startNewSeason(tier:number, playerTeam:{id:string;name:string;color:string}): LeagueState {
-  const cpuTeams = makeCpuTeams(Math.max(1,tier), 17);
+  const safeTier = Math.max(BEST_LEAGUE_TIER, Math.min(STARTING_LEAGUE_TIER, Math.round(tier)));
+  const cpuTeams = makeCpuTeams(safeTier, 17);
   const teams: LeagueTeam[] = [
     {id:playerTeam.id, name:playerTeam.name, color:playerTeam.color, power:0, isPlayer:true},
     ...cpuTeams,
   ];
   return {
-    tier: Math.max(1,tier),
+    tier: safeTier,
     round: 0,
     teams,
     table: teams.map(t=>emptyRow(t.id)),
@@ -121,6 +126,15 @@ const RELEGATION_COUNT = 3;
 
 export function resolveRound(league:LeagueState, playerId:string, playerPower:number): RoundResolution {
   const round = league.fixtures[league.round];
+  if(!round){
+    const playerTeam = league.teams.find(t=>t.id===playerId) ?? {id:playerId, name:"Meu Time", color:"#1d4ed8", power:0, isPlayer:true};
+    return {
+      league: startNewSeason(league.tier, playerTeam),
+      playerResult: "draw",
+      reward: 0,
+      diamondReward: 0,
+    };
+  }
   const table = league.table.map(r=>({...r}));
   const powerOf = (teamId:string) => teamId===playerId ? playerPower : league.teams.find(t=>t.id===teamId)!.power;
 
@@ -135,7 +149,8 @@ export function resolveRound(league:LeagueState, playerId:string, playerPower:nu
       const isHome = fx.home===playerId;
       const my = isHome?hg:ag, opp = isHome?ag:hg;
       playerResult = my>opp ? "win" : my<opp ? "loss" : "draw";
-      reward = playerResult==="win" ? 700+league.tier*130 : playerResult==="draw" ? 220 : 70;
+      const prestige = STARTING_LEAGUE_TIER + 1 - league.tier;
+      reward = playerResult==="win" ? 700+prestige*130 : playerResult==="draw" ? 220+prestige*18 : 70+prestige*8;
       diamondReward = playerResult==="win" && Math.random()<0.18 ? 1 : 0;
     }
   });
@@ -147,8 +162,8 @@ export function resolveRound(league:LeagueState, playerId:string, playerPower:nu
     const standings = [...table].sort(compareStandings);
     const playerPos = standings.findIndex(r=>r.teamId===playerId);
     let nextTier = league.tier;
-    if(playerPos===0) nextTier = league.tier+1;
-    else if(playerPos>=standings.length-RELEGATION_COUNT) nextTier = Math.max(1, league.tier-1);
+    if(playerPos===0) nextTier = Math.max(BEST_LEAGUE_TIER, league.tier-1);
+    else if(playerPos>=standings.length-RELEGATION_COUNT) nextTier = Math.min(STARTING_LEAGUE_TIER, league.tier+1);
     const playerTeam = league.teams.find(t=>t.id===playerId)!;
     newLeague = startNewSeason(nextTier, playerTeam);
   }

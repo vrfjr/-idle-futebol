@@ -1,5 +1,6 @@
 import { Player, Upgrades, FormationKey, PositionKey } from "../types";
-import { FORMATION_BONUS } from "../constants/formations";
+import { FORMATION_BONUS, fieldLayout } from "../constants/formations";
+import { assignPlayersToSlots, formationTargets, lineupCounts, slotEfficiency } from "./lineup";
 
 export interface PowerBreakdown {
   total:number;
@@ -13,33 +14,21 @@ export interface PowerBreakdown {
   targets:Record<PositionKey, number>;
 }
 
-function emptyCounts(): Record<PositionKey, number> {
-  return {GOL:0, ZAG:0, MEI:0, ATA:0};
-}
-
-export function formationTargets(formation:FormationKey): Record<PositionKey, number> {
-  const parts = formation.split("-").map(Number);
-  const targets = emptyCounts();
-  targets.GOL = 1;
-  targets.ZAG = parts[0] ?? 0;
-  targets.ATA = parts[parts.length-1] ?? 0;
-  targets.MEI = parts.slice(1, -1).reduce((sum,n)=>sum+n, 0);
-  return targets;
-}
-
-export function lineupCounts(lineup:Player[]): Record<PositionKey, number> {
-  return lineup.reduce((acc,p)=>{
-    acc[p.pos]++;
-    return acc;
-  }, emptyCounts());
-}
-
+// Real per-slot efficiency average (same POSITION_EFFICIENCY table the Team
+// screen shows per player as "Natural/Adaptado/Fora de posicao") — replaces an
+// earlier coarse approximation that only compared position *counts* against
+// the formation's needs and could disagree with what the UI told the player.
+// Empty slots are excluded here on purpose: lineupMultiplier below already
+// penalizes fielding fewer than 11, so this only measures fit for the players
+// actually on the pitch.
 export function positionFit(lineup:Player[], formation:FormationKey): number {
-  const counts = lineupCounts(lineup);
-  const targets = formationTargets(formation);
-  const matched = (Object.keys(targets) as PositionKey[])
-    .reduce((sum,pos)=>sum+Math.min(counts[pos], targets[pos]), 0);
-  return Math.max(0, Math.min(1, matched/11));
+  const active = lineup.slice(0, 11);
+  const slots = fieldLayout(formation, true, 1, 1);
+  const assigned = assignPlayersToSlots(active, slots);
+  const filled = assigned.filter(s=>s.player);
+  if(!filled.length) return 0;
+  const total = filled.reduce((sum,slot)=>sum+slotEfficiency(slot.player, slot.role), 0);
+  return total/filled.length;
 }
 
 export function calcPowerBreakdown(lineup:Player[], formation:FormationKey, upgrades:Upgrades): PowerBreakdown {

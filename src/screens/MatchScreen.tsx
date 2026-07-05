@@ -29,7 +29,7 @@ function TeamCrest({name,color,side,power}:{name:string;color:string;side:"home"
   return (
     <div style={{display:"flex",flexDirection:"column",alignItems:side==="home"?"flex-start":"flex-end",gap:6,minWidth:0,flex:1}}>
       <div style={{fontSize:9,color:colors.textMuted,fontWeight:900,letterSpacing:1.2,textTransform:"uppercase"}}>
-        {side==="home" ? "Home team" : "Away team"}
+        {side==="home" ? "Meu time" : "Rival"}
       </div>
       <div style={{display:"flex",alignItems:"center",gap:8,flexDirection:side==="home"?"row":"row-reverse",minWidth:0}}>
         <div style={{width:56,height:60,clipPath:"polygon(50% 0, 92% 18%, 82% 80%, 50% 100%, 18% 80%, 8% 18%)",
@@ -49,14 +49,33 @@ function TeamCrest({name,color,side,power}:{name:string;color:string;side:"home"
   );
 }
 
-function FactRow({label,home,away}:{label:string;home:string|number;away:string|number}) {
+function StatDuel({
+  label, home, away, homeDisplay, awayDisplay,
+}:{
+  label:string;
+  home:number;
+  away:number;
+  homeDisplay?:string|number;
+  awayDisplay?:string|number;
+}) {
+  const total = home+away;
+  const homePct = total<=0 ? 50 : Math.max(10, Math.min(90, Math.round((home/total)*100)));
+  const awayPct = 100-homePct;
   return (
-    <div style={{display:"grid",gridTemplateColumns:"54px 1fr 54px",alignItems:"center",
-      minHeight:46,padding:"0 14px",background:"rgba(226,242,255,0.82)",
-      borderBottom:"1px solid rgba(8,25,45,0.12)"}}>
-      <div style={{fontSize:27,color:"#0d4c9c",fontWeight:900,textAlign:"left"}}>{home}</div>
-      <div style={{fontSize:14,color:"#132238",fontWeight:900,textAlign:"center",letterSpacing:0.5}}>{label}</div>
-      <div style={{fontSize:27,color:"#0d4c9c",fontWeight:900,textAlign:"right"}}>{away}</div>
+    <div style={{background:`linear-gradient(180deg, ${colors.surfaceAlt}, ${colors.panel})`,
+      border:`1px solid ${withAlpha(colors.cyan,"soft")}`,borderRadius:10,padding:"9px 10px"}}>
+      <div style={{display:"grid",gridTemplateColumns:"52px 1fr 52px",alignItems:"center",gap:8}}>
+        <div style={{fontSize:23,color:colors.success,fontWeight:900,textAlign:"left"}}>{homeDisplay ?? home}</div>
+        <div style={{textAlign:"center"}}>
+          <div style={{fontSize:10,color:colors.textMuted,fontWeight:900,letterSpacing:1.1}}>{label}</div>
+          <div style={{height:7,borderRadius:8,overflow:"hidden",marginTop:6,display:"flex",
+            background:withAlpha(colors.textMuted,"soft"),border:`1px solid ${withAlpha(colors.cyan,"soft")}`}}>
+            <div style={{width:`${homePct}%`,background:`linear-gradient(90deg, ${colors.success}, ${colors.cyan})`}}/>
+            <div style={{width:`${awayPct}%`,background:`linear-gradient(90deg, ${colors.rivalDark}, ${colors.danger})`}}/>
+          </div>
+        </div>
+        <div style={{fontSize:23,color:colors.danger,fontWeight:900,textAlign:"right"}}>{awayDisplay ?? away}</div>
+      </div>
     </div>
   );
 }
@@ -141,14 +160,17 @@ export function MatchScreen({onToast, onNavigateShop, onNavigateTeam}:Props) {
         </div>
       </div>
 
-      <div style={{margin:"0 14px 12px",borderRadius:12,overflow:"hidden",border:`1px solid ${withAlpha(colors.cyan,"soft")}`,boxShadow:shadows.panel}}>
-        <div style={{background:"#071c3b",color:colors.warning,fontSize:17,fontWeight:900,textAlign:"center",padding:"9px 0",letterSpacing:0.8}}>
-          MATCH FACTS
+      <div style={{margin:"0 14px 12px",borderRadius:12,border:`1px solid ${withAlpha(colors.cyan,"soft")}`,
+        boxShadow:shadows.panel,background:"linear-gradient(180deg, rgba(7,28,59,0.96), rgba(7,10,24,0.96))",padding:10}}>
+        <div style={{color:colors.warning,fontSize:16,fontWeight:900,textAlign:"center",padding:"2px 0 9px",letterSpacing:0.8}}>
+          ESTATISTICAS
         </div>
-        <FactRow label="SHOTS" home={homeShots} away={awayShots}/>
-        <FactRow label="ON TARGET" home={homeTarget} away={awayTarget}/>
-        <FactRow label="POSSESSION" home={`${possession}%`} away={`${100-possession}%`}/>
-        <FactRow label="FOULS" home={homeFouls} away={awayFouls}/>
+        <div style={{display:"flex",flexDirection:"column",gap:7}}>
+          <StatDuel label="FINALIZACOES" home={homeShots} away={awayShots}/>
+          <StatDuel label="NO GOL" home={homeTarget} away={awayTarget}/>
+          <StatDuel label="POSSE" home={possession} away={100-possession} homeDisplay={`${possession}%`} awayDisplay={`${100-possession}%`}/>
+          <StatDuel label="FALTAS" home={homeFouls} away={awayFouls}/>
+        </div>
       </div>
 
       <div style={{margin:"0 14px 10px",borderRadius:14,overflow:"hidden",

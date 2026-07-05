@@ -2,7 +2,7 @@ import React from "react";
 import { Coins } from "lucide-react";
 import { useGame } from "../store/GameContext";
 import { BUY_PLAYER, SELL_PLAYER, REFRESH_MARKET } from "../store/actions";
-import { makePlayer } from "../utils/gameLogic";
+import { makeMarket } from "../utils/gameLogic";
 import { fmt } from "../utils/helpers";
 import { PlayerCard } from "../components/PlayerCard";
 import { GameButton } from "../components/GameButton";
@@ -31,8 +31,8 @@ export function MarketScreen({onToast}:Props) {
 
   const doRefresh = ()=>{
     // Guard in UI; reducer also enforces it
-    if(state.coins<300){onToast("300 moedas necessárias",true);return;}
-    dispatch({type:REFRESH_MARKET,market:Array.from({length:6},()=>makePlayer())});
+    if(state.coins<300){onToast("300 moedas necessarias",true);return;}
+    dispatch({type:REFRESH_MARKET,market:makeMarket(state.league.tier)});
     onToast("Mercado atualizado");
   };
 
@@ -41,10 +41,17 @@ export function MarketScreen({onToast}:Props) {
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
         <div style={{fontSize:17,fontWeight:900,color:colors.textHeading,letterSpacing:-0.3}}>Mercado</div>
         <GameButton onClick={doRefresh} variant="secondary" size="sm" color={colors.textSecondary}>
-          Atualizar — 300 <Coins size={12}/>
+          Atualizar - 300 <Coins size={12}/>
         </GameButton>
       </div>
-      <Label>DISPONÍVEIS</Label>
+      <div style={{background:withAlpha(colors.cyan,"subtle"),border:`1px solid ${withAlpha(colors.cyan,"border")}`,
+        borderRadius:10,padding:"9px 11px",marginBottom:12}}>
+        <div style={{fontSize:9,color:colors.textMuted,fontWeight:900,letterSpacing:1}}>QUALIDADE DO MERCADO</div>
+        <div style={{fontSize:12,color:colors.textSecondary,fontWeight:800,marginTop:3}}>
+          Liga {state.league.tier}: jogadores melhores aparecem com mais frequencia nas ligas mais altas.
+        </div>
+      </div>
+      <Label>DISPONIVEIS</Label>
       <div style={{display:"flex",flexDirection:"column",gap:7,marginBottom:20}}>
         {state.market.map((p:any)=>(
           <PlayerCard key={p.id} player={p} onAction={()=>doBuy(p)}

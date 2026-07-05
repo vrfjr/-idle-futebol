@@ -1,9 +1,49 @@
 import { FieldSlot } from "../constants/formations";
-import { FormationKey, Player } from "../types";
-import { formationTargets } from "./balance";
+import { FormationKey, Player, PositionKey } from "../types";
 
 export interface AssignedFieldSlot extends FieldSlot {
   player?: Player;
+}
+
+function emptyCounts(): Record<PositionKey, number> {
+  return {GOL:0, ZAG:0, MEI:0, ATA:0};
+}
+
+export function formationTargets(formation:FormationKey): Record<PositionKey, number> {
+  const parts = formation.split("-").map(Number);
+  const targets = emptyCounts();
+  targets.GOL = 1;
+  targets.ZAG = parts[0] ?? 0;
+  targets.ATA = parts[parts.length-1] ?? 0;
+  targets.MEI = parts.slice(1, -1).reduce((sum,n)=>sum+n, 0);
+  return targets;
+}
+
+export function lineupCounts(lineup:Player[]): Record<PositionKey, number> {
+  return lineup.reduce((acc,p)=>{
+    acc[p.pos]++;
+    return acc;
+  }, emptyCounts());
+}
+
+export const POSITION_EFFICIENCY: Record<PositionKey, Record<PositionKey, number>> = {
+  GOL: {GOL:1,    ZAG:0.55, MEI:0.55, ATA:0.50},
+  ZAG: {GOL:0.55, ZAG:1,    MEI:0.75, ATA:0.60},
+  MEI: {GOL:0.55, ZAG:0.78, MEI:1,    ATA:0.82},
+  ATA: {GOL:0.50, ZAG:0.60, MEI:0.82, ATA:1},
+};
+
+export function slotEfficiency(player:Player|undefined, slotRole:PositionKey): number {
+  if(!player) return 0;
+  return POSITION_EFFICIENCY[player.pos][slotRole] ?? 0.55;
+}
+
+export function positionStatus(player:Player|undefined, slotRole:PositionKey): {label:string;efficiency:number;colorKey:"success"|"warning"|"danger"} {
+  const efficiency = slotEfficiency(player, slotRole);
+  if(efficiency>=1) return {label:"Natural", efficiency, colorKey:"success"};
+  if(efficiency>=0.9) return {label:"Secundaria", efficiency, colorKey:"success"};
+  if(efficiency>=0.75) return {label:"Adaptado", efficiency, colorKey:"warning"};
+  return {label:"Fora de posicao", efficiency, colorKey:"danger"};
 }
 
 export function assignPlayersToSlots(lineup:Player[], slots:FieldSlot[]): AssignedFieldSlot[] {
@@ -44,4 +84,18 @@ export function pickBalancedLineup(roster:Player[], formation:FormationKey, exis
   }
 
   return lineup;
+}
+
+export function validateLineup(lineup:Player[], formation:FormationKey): string[] {
+  const issues: string[] = [];
+  const targets = formationTargets(formation);
+  const unique = new Set(lineup.map(p=>p.id));
+  if(lineup.length<11) issues.push(`Faltam ${11-lineup.length} jogador(es) em campo.`);
+  if(unique.size!==lineup.length) issues.push("Ha jogador duplicado na escalacao.");
+  if(!lineup.some(p=>p.pos==="GOL")) issues.push("Escalacao sem goleiro.");
+  (Object.keys(targets) as PositionKey[]).forEach(pos=>{
+    const have = lineup.filter(p=>p.pos===pos).length;
+    if(have<targets[pos]) issues.push(`${pos}: ${have}/${targets[pos]} natural.`);
+  });
+  return issues;
 }

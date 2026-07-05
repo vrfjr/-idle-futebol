@@ -1,23 +1,52 @@
 import { GameState, FormationKey, Player } from "../types";
 import { GameAction, PASSIVE_INCOME, BUY_PLAYER, SELL_PLAYER, TOGGLE_SQUAD,
-  UPGRADE, REFRESH_MARKET, BUY_PACK, ADD_REWARD, SET_FORMATION, RESOLVE_ROUND,
+  UPGRADE, REFRESH_MARKET, BUY_PACK, ADD_REWARD, SET_FORMATION, SET_LINEUP, RESOLVE_ROUND,
   SET_TEAM_IDENTITY, LOAD } from "./actions";
-import { makePlayer } from "../utils/gameLogic";
+import { makeMarket, makeMarketPlayer, makePlayer } from "../utils/gameLogic";
 import { upgCost } from "../utils/balance";
-import { startNewSeason } from "../utils/league";
+import { STARTING_LEAGUE_TIER, startNewSeason } from "../utils/league";
 import { pickBalancedLineup } from "../utils/lineup";
 
 export const PLAYER_TEAM_ID = "player";
 const DEFAULT_TEAM_NAME = "Meu Time";
 const DEFAULT_TEAM_COLOR = "#1d4ed8";
-const STARTER_ROSTER_SIZE = 14;
+const STARTER_POSITIONS: Player["pos"][] = [
+  "GOL", "GOL",
+  "ZAG", "ZAG", "ZAG", "ZAG", "ZAG",
+  "MEI", "MEI", "MEI", "MEI",
+  "ATA", "ATA", "ATA",
+];
+const STARTER_ROSTER_SIZE = STARTER_POSITIONS.length;
 const STARTER_LINEUP_SIZE = 11;
 
 function createStarterRoster(): Player[] {
-  return Array.from({length:STARTER_ROSTER_SIZE}, ()=>makePlayer("common"));
+  return STARTER_POSITIONS.map(pos=>makePlayer("common", pos));
+}
+
+function shouldRepairFreshStarterRoster(state:GameState): boolean {
+  if(state.roster.length!==STARTER_ROSTER_SIZE) return false;
+  if(!state.roster.every(p=>p.rarity==="common")) return false;
+  if(state.league.round!==0) return false;
+  if(!state.league.table.every(row=>row.played===0)) return false;
+
+  const required = STARTER_POSITIONS.reduce((acc,pos)=>{
+    acc[pos] = (acc[pos] ?? 0)+1;
+    return acc;
+  }, {} as Record<Player["pos"], number>);
+  const counts = state.roster.reduce((acc,p)=>{
+    acc[p.pos] = (acc[p.pos] ?? 0)+1;
+    return acc;
+  }, {} as Record<Player["pos"], number>);
+
+  return STARTER_POSITIONS.some(pos=>(counts[pos] ?? 0) < required[pos]);
 }
 
 function ensureStarterRoster(state:GameState): GameState {
+  if(shouldRepairFreshStarterRoster(state)){
+    const roster = createStarterRoster();
+    return {...state, roster, lineup: pickBalancedLineup(roster, state.formation)};
+  }
+
   const roster = state.roster.slice();
   while(roster.length<STARTER_ROSTER_SIZE) roster.push(makePlayer("common"));
 
@@ -42,8 +71,8 @@ export function createInitialState(): GameState {
     formation: "4-3-3",
     upgrades: {attack:0, defense:0, training:0, fans:0},
     teamName: DEFAULT_TEAM_NAME, teamColor: DEFAULT_TEAM_COLOR,
-    league: startNewSeason(1, {id:PLAYER_TEAM_ID, name:DEFAULT_TEAM_NAME, color:DEFAULT_TEAM_COLOR}),
-    market: Array.from({length:6}, ()=>makePlayer()),
+    league: startNewSeason(STARTING_LEAGUE_TIER, {id:PLAYER_TEAM_ID, name:DEFAULT_TEAM_NAME, color:DEFAULT_TEAM_COLOR}),
+    market: makeMarket(STARTING_LEAGUE_TIER),
     passiveRate: 10,
   };
 }
@@ -64,7 +93,7 @@ export function gameReducer(state:GameState, action:GameAction): GameState {
         coins: state.coins-action.player.price,
         roster: [...state.roster, action.player],
         // Replace the bought card in the market immediately
-        market: state.market.map(m=>m.id===action.player.id ? makePlayer() : m),
+        market: state.market.map(m=>m.id===action.player.id ? makeMarketPlayer(state.league.tier) : m),
       };
     }
 
@@ -116,6 +145,9 @@ export function gameReducer(state:GameState, action:GameAction): GameState {
 
     case SET_FORMATION:
       return {...state, formation: action.formation as FormationKey};
+
+    case SET_LINEUP:
+      return {...state, lineup: action.lineup.slice(0, STARTER_LINEUP_SIZE)};
 
     case RESOLVE_ROUND:
       return {
