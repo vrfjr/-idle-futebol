@@ -96,6 +96,47 @@ const DEFAULT_TACTICS: TeamTactics = {
   directness: 0.50,
 };
 
+// Systemic per-position tendencies — attackTarget()/defensiveTarget() read
+// from this table instead of branching on `p.pos===...` per role, so adding
+// or retuning a position never means hunting through scattered if/else.
+interface PositionProfile {
+  /** Base extra forward push (W fraction) applied on top of the formation
+   *  anchor while the team has the ball. */
+  pushBase: number;
+  /** Extra push range added on top of pushBase, scaled by a tactics field. */
+  pushRange: number;
+  /** Which tactics dial scales pushRange — defenders scale with how high the
+   *  team's line plays, everyone further forward scales with directness. */
+  pushTactic: "depth" | "directness";
+  /** Can this role make a late forward run into space (attacker runs,
+   *  fullback overlaps)? 0 = never bothers, higher = more eager/frequent. */
+  runFactor: number;
+  /** How much this role hugs the touchline vs drifts central without the
+   *  ball — higher = stays wider. */
+  defendWidth: number;
+}
+
+const POSITION_PROFILES: Record<Exclude<PositionKey,"GOL">, PositionProfile> = {
+  ZAG: { pushBase:0.015, pushRange:0.035, pushTactic:"depth",       runFactor:0,    defendWidth:0.30 },
+  LD:  { pushBase:0.030, pushRange:0.050, pushTactic:"directness",  runFactor:0.55, defendWidth:0.62 },
+  LE:  { pushBase:0.030, pushRange:0.050, pushTactic:"directness",  runFactor:0.55, defendWidth:0.62 },
+  VOL: { pushBase:0.018, pushRange:0.028, pushTactic:"depth",       runFactor:0,    defendWidth:0.34 },
+  MC:  { pushBase:0.040, pushRange:0.050, pushTactic:"directness",  runFactor:0.25, defendWidth:0.42 },
+  MEI: { pushBase:0.045, pushRange:0.060, pushTactic:"directness",  runFactor:0.60, defendWidth:0.46 },
+  PD:  { pushBase:0.060, pushRange:0.070, pushTactic:"directness",  runFactor:0.85, defendWidth:0.68 },
+  PE:  { pushBase:0.060, pushRange:0.070, pushTactic:"directness",  runFactor:0.85, defendWidth:0.68 },
+  SA:  { pushBase:0.065, pushRange:0.055, pushTactic:"directness",  runFactor:0.70, defendWidth:0.44 },
+  CA:  { pushBase:0.075, pushRange:0.065, pushTactic:"directness",  runFactor:0.75, defendWidth:0.38 },
+};
+
+// LD/PD and LE/PE pair up on the same flank — used so the fullback only
+// overlaps when its winger isn't already sitting on that same touchline
+// (and vice versa for the winger cutting inside), instead of both
+// permanently hugging the line and colliding.
+const WIDE_PARTNER: Partial<Record<PositionKey,PositionKey>> = {
+  LD:"PD", PD:"LD", LE:"PE", PE:"LE",
+};
+
 const POS_DEFAULTS: Record<
   PositionKey,
   Pick<SimAgent, "pac" | "sho" | "pas" | "def" | "phy" | "dri" | "ovr">
@@ -392,21 +433,26 @@ function moveAgentToward(
   p.stamina = clamp(p.stamina - effort * 0.000018 + (1 - effort) * 0.000006, 0.55, 1);
 }
 
+function findTeammate(team: SimAgent[], pos: PositionKey, exclude: SimAgent): SimAgent | undefined {
+  return team.find((t) => t !== exclude && t.pos === pos);
+}
+
+// How far a player has pushed beyond their own formation anchor, in their
+// attacking direction — positive means further forward than their base spot.
+function forwardAdvancement(p: SimAgent): number {
+  return attackDir(p.isHome) * (p.x - p.bx);
+}
+
 function attackTarget(
   p: SimAgent,
   carrier: SimAgent,
   opponents: SimAgent[],
+  team: SimAgent[],
   tactics: TeamTactics,
   W: number,
   H: number,
 ): { x: number; y: number } {
   const dir = attackDir(p.isHome);
-  const widthScale = 0.68 + tactics.width * 0.62;
-  const ballShiftX = (carrier.x - W / 2) * 0.10;
-  const ballShiftY = (carrier.y - H / 2) * 0.14;
-
-  let x = p.bx + ballShiftX;
-  let y = H / 2 + (p.by - H / 2) * widthScale + ballShiftY;
 
   if (p.pos === "GOL") {
     return {
@@ -415,34 +461,51 @@ function attackTarget(
     };
   }
 
-  if (p.pos === "ZAG") {
-    x += dir * W * (0.015 + tactics.depth * 0.035);
-  } else if (p.pos === "MEI") {
-    x += dir * W * (0.035 + tactics.directness * 0.045);
-  } else {
-    x += dir * W * (0.065 + tactics.directness * 0.075);
-  }
+  const profile = POSITION_PROFILES[p.pos];
+  const widthScale = 0.68 + tactics.width * 0.62;
+  const ballShiftX = (carrier.x - W / 2) * 0.10;
+  const ballShiftY = (carrier.y - H / 2) * 0.14;
+
+  let x = p.bx + ballShiftX;
+  let y = H / 2 + (p.by - H / 2) * widthScale + ballShiftY;
+
+  const pushTacticValue = profile.pushTactic === "depth" ? tactics.depth : tactics.directness;
+  x += dir * W * (profile.pushBase + pushTacticValue * profile.pushRange);
 
   const aheadOfCarrier = dir * (p.x - carrier.x) > 0;
   const openDistance = nearestDistance(opponents, p.x, p.y);
   const openness = clamp(openDistance / (W * 0.12), 0, 1);
 
-  // TEMP (Etapa 1 compile fix): broadened from the old single "ATA" role to the
-  // new forward positions — Etapa 2 replaces this whole function with the
-  // POSITION_PROFILES-driven version.
-  if (
-    (p.pos === "CA" || p.pos === "SA" || p.pos === "PD" || p.pos === "PE") &&
-    aheadOfCarrier &&
-    openness > 0.42
-  ) {
-    x += dir * W * (0.025 + tactics.risk * 0.055) * openness;
+  // Late run into space beyond the push above — strength scales per role via
+  // runFactor (0 for holding roles like VOL/ZAG, highest for wingers/CA).
+  if (profile.runFactor > 0 && aheadOfCarrier && openness > 0.42) {
+    x += dir * W * (0.025 + tactics.risk * 0.055) * openness * profile.runFactor;
   }
 
-  if (
-    p.pos === "MEI" &&
-    Math.abs(p.y - carrier.y) < H * 0.16
-  ) {
-    y += (p.by < H / 2 ? -1 : 1) * H * 0.035 * (0.5 + tactics.width);
+  const widePartnerPos = WIDE_PARTNER[p.pos];
+
+  // Fullback overlap: only bombs on past its own winger when that flank is
+  // actually open — i.e. the winger isn't already hugging that same line.
+  if ((p.pos === "LD" || p.pos === "LE") && widePartnerPos) {
+    const winger = findTeammate(team, widePartnerPos, p);
+    const wingerHuggingLine = winger ? Math.abs(winger.y - p.by) < H * 0.14 : false;
+    if (!wingerHuggingLine) {
+      x += dir * W * 0.03 * (0.4 + tactics.risk * 0.6);
+    }
+  }
+
+  // Winger cuts inside once its own fullback has taken over the flank.
+  if ((p.pos === "PD" || p.pos === "PE") && widePartnerPos) {
+    const fullback = findTeammate(team, widePartnerPos, p);
+    if (fullback && forwardAdvancement(fullback) > W * 0.05) {
+      y = lerp(y, H / 2, 0.28 * (0.5 + tactics.directness));
+    }
+  }
+
+  // Advanced central mids float toward the ball's channel instead of holding
+  // a fixed lane (old behavior was MEI-only; now shared with MC).
+  if ((p.pos === "MEI" || p.pos === "MC") && Math.abs(p.y - carrier.y) < H * 0.16) {
+    y += (p.by < H / 2 ? -1 : 1) * H * 0.03 * (0.5 + tactics.width);
   }
 
   return {
@@ -456,6 +519,7 @@ function defensiveTarget(
   ballX: number,
   ballY: number,
   opponents: SimAgent[],
+  team: SimAgent[],
   tactics: TeamTactics,
   isPresser: boolean,
   W: number,
@@ -480,12 +544,26 @@ function defensiveTarget(
     };
   }
 
-  const compactWidth = 0.48 + tactics.width * 0.32;
+  const profile = POSITION_PROFILES[p.pos];
+  const compactWidth = profile.defendWidth + tactics.width * 0.28;
   let x = p.bx + dir * (tactics.depth - 0.5) * W * 0.13;
   let y = H / 2 + (p.by - H / 2) * compactWidth;
 
   x += (ballX - W / 2) * 0.085;
   y += (ballY - H / 2) * 0.20;
+
+  // VOL shades toward whichever flank its own fullback vacated by pushing
+  // forward, instead of holding a fixed central spot regardless of the
+  // structure around it — this is the one role explicitly meant to protect
+  // the space a bombing-on fullback leaves behind.
+  if (p.pos === "VOL") {
+    const ld = findTeammate(team, "LD", p);
+    const le = findTeammate(team, "LE", p);
+    const ldGone = ld ? forwardAdvancement(ld) > W * 0.08 : false;
+    const leGone = le ? forwardAdvancement(le) > W * 0.08 : false;
+    if (ldGone && !leGone) y = lerp(y, H * 0.72, 0.35);
+    else if (leGone && !ldGone) y = lerp(y, H * 0.28, 0.35);
+  }
 
   let mark: SimAgent | null = null;
   let markDist = Infinity;
@@ -532,12 +610,13 @@ function updateTeamShape(sim: Sim, isHome: boolean, W: number, H: number): void 
     if (p === carrier) return;
 
     const target = hasBall && carrier
-      ? attackTarget(p, carrier, opponents, tactics, W, H)
+      ? attackTarget(p, carrier, opponents, team, tactics, W, H)
       : defensiveTarget(
           p,
           ballX,
           ballY,
           opponents,
+          team,
           tactics,
           pressers.has(p),
           W,
@@ -589,11 +668,11 @@ function bestPassChoice(
     const laneRisk = passLaneRisk(carrier, target, opponents);
     const idealDistance = W * lerp(0.14, 0.28, tactics.directness);
     const distanceFit = 1 - clamp(Math.abs(distance - idealDistance) / (W * 0.26), 0, 1);
-    // TEMP (Etapa 1 compile fix): broadened role buckets — Etapa 2 replaces this
-    // with per-position profile data instead of a hardcoded bonus list.
-    const forwardRole = target.pos === "CA" || target.pos === "SA" || target.pos === "PD" || target.pos === "PE";
-    const creativeRole = target.pos === "MEI" || target.pos === "MC";
-    const roleBonus = forwardRole ? 0.10 : creativeRole ? 0.06 : 0;
+    // Reuses runFactor (how eager a role is to make a forward run) as the
+    // pass-target bonus too — a role worth running into space is the same
+    // role worth picking out with a pass, so this stays a single source of
+    // truth instead of a second, separately-tuned bucket list.
+    const roleBonus = target.pos === "GOL" ? 0 : POSITION_PROFILES[target.pos].runFactor * 0.12;
     const backwardPenalty = progressGain < -0.03 ? Math.abs(progressGain) * 1.5 : 0;
     const directnessWeight = lerp(1.25, 2.5, tactics.directness);
 
