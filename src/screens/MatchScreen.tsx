@@ -1,4 +1,4 @@
-import React, { useRef, useCallback } from "react";
+import React, { useRef, useCallback, useState } from "react";
 import { Coins, Zap, CircleDot, Circle, Tv, Gem, Trophy, BarChart3, Waypoints, Shirt, Users, ChevronRight } from "lucide-react";
 import { useGame } from "../store/GameContext";
 import { useMatchSimulation } from "../hooks/useMatchSimulation";
@@ -7,6 +7,7 @@ import { calcPower, passivePerSec } from "../utils/balance";
 import { fmt } from "../utils/helpers";
 import { ADD_REWARD } from "../store/actions";
 import { StatPill } from "../components/StatPill";
+import { LeagueTableScreen } from "./LeagueTableScreen";
 import { colors, radii, shadows, withAlpha } from "../styles/tokens";
 
 interface Props { onToast:(msg:string,bad?:boolean)=>void; onNavigateShop:()=>void; }
@@ -15,6 +16,7 @@ export function MatchScreen({onToast,onNavigateShop}:Props) {
   const {state, dispatch} = useGame();
   const containerRef = useRef<HTMLDivElement>(null);
   const {liveScore, setLiveScore} = useGameLoop();
+  const [showTable, setShowTable] = useState(false);
 
   const handleGoal = useCallback((home:number,away:number)=>{
     setLiveScore(prev=>({...prev,home,away}));
@@ -31,10 +33,10 @@ export function MatchScreen({onToast,onNavigateShop}:Props) {
     <div>
       <div style={{padding:"16px 16px 12px",background:colors.bg}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
-          <div>
+          <button onClick={()=>setShowTable(true)} style={{background:"transparent",border:"none",padding:0,cursor:"pointer",textAlign:"left"}}>
             <div style={{fontSize:9,color:colors.textMuted,fontWeight:700,letterSpacing:1.5,display:"flex",alignItems:"center",gap:4}}><Trophy size={10}/> TEMPORADA</div>
             <div style={{fontSize:22,fontWeight:900,color:colors.warning,letterSpacing:-0.5,lineHeight:1}}>Liga {state.league.tier}</div>
-          </div>
+          </button>
           <div style={{textAlign:"center"}}>
             <div style={{fontSize:9,color:colors.textMuted,fontWeight:700,letterSpacing:1.5,display:"flex",alignItems:"center",justifyContent:"center",gap:4}}><Zap size={10}/> PODER</div>
             <div style={{fontSize:28,fontWeight:900,color:colors.success,letterSpacing:-1,lineHeight:1}}>{pwr}</div>
@@ -109,6 +111,10 @@ export function MatchScreen({onToast,onNavigateShop}:Props) {
           <ChevronRight size={16}/>
         </button>
       </div>
+
+      {showTable && playerTeamId && (
+        <LeagueTableScreen league={state.league} playerTeamId={playerTeamId} onClose={()=>setShowTable(false)}/>
+      )}
     </div>
   );
 }
