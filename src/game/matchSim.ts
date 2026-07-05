@@ -54,6 +54,7 @@ export interface PendingShot {
    *  blocking defender is the last touch, so this resolves as a corner
    *  rather than a goal kick, even though the shooting team was attacking. */
   wasBlocked?: boolean;
+  blockedToCorner?: boolean;
 }
 
 export interface PendingPass {
@@ -118,6 +119,7 @@ export interface CreateSimOptions {
   homeTactics?: Partial<TeamTactics>;
   awayTactics?: Partial<TeamTactics>;
   seed?: number;
+  homePower?: number;
 }
 
 const DEFAULT_TACTICS: TeamTactics = {
@@ -437,14 +439,14 @@ export function calculateShotChance(
   ) / 100;
 
   const logit =
-    -3.2 +
-    shooterQuality * 1.3 +
-    distanceFactor * 2.5 +
-    angleFactor * 1.15 -
-    pressure * 1.6 +
-    (shooterQuality - keeperQuality) * 1.4;
+    -2.95 +
+    shooterQuality * 1.45 +
+    distanceFactor * 2.65 +
+    angleFactor * 1.25 -
+    pressure * 1.35 +
+    (shooterQuality - keeperQuality) * 1.25;
 
-  return clamp(sigmoid(logit), 0.015, 0.72);
+  return clamp(sigmoid(logit), 0.02, 0.76);
 }
 
 function moveAgentToward(
@@ -851,8 +853,16 @@ function executeShot(
   const xg = calculateShotChance(shooter, keeper, opponents, W, H);
 
   const blocker = findShotBlocker(shooter, opponents, W, H);
-  const blockChance = blocker ? clamp(0.12 + blocker.def * 0.005, 0.08, 0.42) : 0;
+  const shotPressure = pressureAt(opponents, shooter.x, shooter.y, W);
+  const blockChance = blocker
+    ? clamp(0.08 + blocker.def * 0.0038 + shotPressure * 0.08, 0.06, 0.34)
+    : 0;
   if (blocker && rand(sim) < blockChance) {
+    const blockedToCorner = rand(sim) < clamp(
+      0.36 + Math.abs(blocker.y - H / 2) / H * 0.32 + xg * 0.25,
+      0.28,
+      0.68,
+    );
     sim.lastTouchHome = blocker.isHome;
     sim.lastTouchAgent = blocker;
     const deflectY = clamp(blocker.y + centeredRand(sim) * H * 0.10, H * 0.08, H * 0.92);
@@ -863,7 +873,7 @@ function executeShot(
 
     sim.ball.vx = (dx / d) * speed;
     sim.ball.vy = (dy / d) * speed;
-    sim.pendingShot = { isGoal: false, wasAttacking: shooter.isHome, xg, wasBlocked: true };
+    sim.pendingShot = { isGoal: false, wasAttacking: shooter.isHome, xg, wasBlocked: true, blockedToCorner };
     sim.shotTimer = Math.round(clamp(d / speed * 0.9, 5, 16));
     sim.pendingPass = null;
 
@@ -933,7 +943,7 @@ function decideCarrierAction(sim: Sim, carrier: SimAgent, W: number, H: number):
 
   const gx = goalXFor(carrier.isHome, W);
   const distanceToGoal = Math.hypot(gx - carrier.x, H / 2 - carrier.y);
-  const maxShotDistance = W * (0.16 + carrier.sho / 720);
+  const maxShotDistance = W * (0.18 + carrier.sho / 650);
   const xg = calculateShotChance(carrier, keeper, opponents, W, H);
   const pass = bestPassChoice(sim, carrier, W, H);
   const pressure = pressureAt(opponents, carrier.x, carrier.y, W);
@@ -945,8 +955,17 @@ function decideCarrierAction(sim: Sim, carrier: SimAgent, W: number, H: number):
   // since it was competing at 1/3 to 1/5 the scale. Putting xg through the
   // same kind of transform makes "in range with a decent chance" genuinely
   // competitive with "there's an OK pass on", instead of passing forever.
+  const roleShotBias =
+    carrier.pos === "CA" || carrier.pos === "SA" ? 0.10 :
+    carrier.pos === "PD" || carrier.pos === "PE" || carrier.pos === "MEI" ? 0.06 :
+    carrier.pos === "MC" ? 0.02 :
+    -0.03;
+  const closeRangeBonus = distanceToGoal <= W * 0.13 ? 0.12 : distanceToGoal <= W * 0.18 ? 0.06 : 0;
   const shootUtility = distanceToGoal <= maxShotDistance
-    ? sigmoid((xg - 0.10) * 6) * (0.92 + carrier.sho / 210) + tactics.risk * 0.05
+    ? sigmoid((xg - 0.075) * 7.2) * (1.00 + carrier.sho / 190) +
+      tactics.risk * 0.08 +
+      closeRangeBonus +
+      roleShotBias
     : -1;
 
   const passUtility = pass
@@ -971,7 +990,7 @@ function decideCarrierAction(sim: Sim, carrier: SimAgent, W: number, H: number):
   if (
     shootUtility + shootNoise > passUtility + passNoise &&
     shootUtility + shootNoise > dribbleUtility + dribbleNoise &&
-    xg > 0.035
+    xg > 0.025
   ) {
     executeShot(sim, carrier, W, H);
     return;
@@ -1432,6 +1451,13 @@ function resolvePendingShot(
   sim.shotTimer = 0;
 
   if (shot.wasBlocked) {
+    if (!shot.blockedToCorner) {
+      const defenders = teamOf(sim, defendingHome);
+      const recovery = nearestPlayer(defenders, sim.ball.x, sim.ball.y)?.p;
+      if (recovery) setCarrier(sim, recovery);
+      else restartPossession(sim, defendingHome, sim.ball.x, sim.ball.y);
+      return;
+    }
     // The defender's touch (not the shooter's) sent it behind — corner for
     // the attacking team, exactly like a real charged-down shot.
     const cornerY = sim.ball.y > H / 2 ? H * 0.94 : H * 0.06;
@@ -1520,6 +1546,12 @@ export function createSim(
   const homePts = fieldLayout(homeFormation, true, W, H);
   const awayPts = fieldLayout(awayFormation, false, W, H);
   const assignedHome = assignPlayersToSlots(homeLineup.slice(0, 11), homePts);
+  const homeAverageOvr = assignedHome.length
+    ? assignedHome.reduce((sum,p)=>sum+(p.player?.ovr ?? POS_DEFAULTS[p.role].ovr), 0)/assignedHome.length
+    : 45;
+  const homeScale = options.homePower
+    ? clamp(options.homePower/Math.max(1, homeAverageOvr), 0.68, 1.75)
+    : 1;
   const awayScale = clamp(opponentPower / 45, 0.72, 1.65);
 
   let rngState = (options.seed ?? (Date.now() ^ Math.floor(Math.random() * 0xffffffff))) >>> 0;
@@ -1549,7 +1581,7 @@ export function createSim(
     controlCooldown: 0,
     stamina: 1,
     pos: pt.role,
-    ...fromPlayer(player, pt.role, isHome ? 1 : awayScale),
+    ...fromPlayer(player, pt.role, isHome ? homeScale : awayScale),
   });
 
   const sim: Sim = {

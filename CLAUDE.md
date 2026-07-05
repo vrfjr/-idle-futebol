@@ -21,10 +21,10 @@ npm test            # jest, roda uma vez e sai (não é watch mode)
 
 `npm run test:watch` é o modo interativo do CRA, para quando estiver escrevendo testes.
 
-**Estado atual dos testes: não existe nenhum arquivo de teste no projeto.** `@testing-library/react`
-nem está instalado. `npm test` passa (exit 0) só porque foi configurado com `--passWithNoTests` —
-isso é um sinal "não quebrou nada que já existia", não "está testado". Se for adicionar testes,
-instale `@testing-library/react` primeiro.
+**Estado atual dos testes (2026-07-05): 8 suites / 19 testes passando** — cobrem reducer,
+storage, ganho offline, lineup e matchSim (arquivos `*.test.ts` em `src/`). São testes de
+lógica pura via Jest; `@testing-library/react` continua não instalado, então componentes
+React não têm teste — instale-o antes de testar componentes.
 
 ## Convenções de estilo observadas no código
 

@@ -9,6 +9,10 @@ function clampTier(tier:number): number {
   return Math.max(1, Math.min(25, Math.round(tier)));
 }
 
+function clamp(v:number, min:number, max:number): number {
+  return Math.max(min, Math.min(max, v));
+}
+
 export function makePlayer(forced?: RarityKey, forcedPosition?: PositionKey): Player {
   const r = Math.random()*100;
   const rarity: RarityKey = forced ?? (r<3?"legendary":r<15?"epic":r<40?"rare":"common");
@@ -45,10 +49,29 @@ export function makeMarket(tier:number, count=6): Player[] {
   return Array.from({length:count}, ()=>makeMarketPlayer(tier));
 }
 
+export interface MatchOutcomeProbabilities {
+  win:number;
+  draw:number;
+  loss:number;
+}
+
+export function matchOutcomeProbabilities(firstPower:number, secondPower:number): MatchOutcomeProbabilities {
+  const diff = clamp(firstPower, 1, 999) - clamp(secondPower, 1, 999);
+  const gap = Math.abs(diff);
+  const draw = clamp(0.06 + Math.exp(-gap/22)*0.18, 0.05, 0.24);
+  const firstShare = 1/(1+Math.exp(-diff/13));
+  const decisive = 1-draw;
+  return {
+    win: firstShare*decisive,
+    draw,
+    loss: (1-firstShare)*decisive,
+  };
+}
+
 export function simulateMatch(playerPower:number, opponentPower:number): MatchResult {
-  const chance = playerPower/(playerPower+opponentPower);
+  const chance = matchOutcomeProbabilities(playerPower, opponentPower);
   const roll = Math.random();
-  if(roll < chance) return "win";
-  if(roll < chance+0.13) return "draw";
+  if(roll < chance.win) return "win";
+  if(roll < chance.win+chance.draw) return "draw";
   return "loss";
 }

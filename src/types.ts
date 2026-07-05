@@ -78,6 +78,10 @@ export interface GameState {
   upgrades: Upgrades;
   teamName: string;
   teamColor: string;
+  freeNameChangeUsed: boolean;
+  freeColorChangeUsed: boolean;
+  adsRemoved: boolean;
+  speed3Unlocked: boolean;
   league: LeagueState;
   market: Player[];
   passiveRate: number;

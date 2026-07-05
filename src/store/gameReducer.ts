@@ -1,7 +1,7 @@
 import { GameState, FormationKey, Player } from "../types";
 import { GameAction, PASSIVE_INCOME, BUY_PLAYER, SELL_PLAYER, TOGGLE_SQUAD,
   UPGRADE, REFRESH_MARKET, BUY_PACK, ADD_REWARD, SET_FORMATION, SET_LINEUP, RESOLVE_ROUND,
-  SET_TEAM_IDENTITY, CLEAR_OFFLINE_REWARD, LOAD } from "./actions";
+  SET_TEAM_IDENTITY, UNLOCK_SPEED_3X, PURCHASE_STORE_OFFER, CLEAR_OFFLINE_REWARD, LOAD } from "./actions";
 import { makeMarket, makeMarketPlayer, makePlayer } from "../utils/gameLogic";
 import { passivePerSec, upgCost } from "../utils/balance";
 import { STARTING_LEAGUE_TIER, startNewSeason } from "../utils/league";
@@ -11,6 +11,7 @@ import { calculateOfflineIncome } from "../utils/offlineIncome";
 export const PLAYER_TEAM_ID = "player";
 const DEFAULT_TEAM_NAME = "Meu Time";
 const DEFAULT_TEAM_COLOR = "#1d4ed8";
+export const IDENTITY_CHANGE_DIAMOND_COST = 50;
 // Covers exactly the 11 roles a 4-3-3 needs, plus a 3-player bench.
 const STARTER_POSITIONS: Player["pos"][] = [
   "GOL", "GOL",
@@ -54,6 +55,8 @@ function ensureStarterRoster(state:GameState): GameState {
 
   const validIds = new Set(roster.map(p=>p.id));
   const preserved = state.lineup.filter(p=>validIds.has(p.id)).slice(0, STARTER_LINEUP_SIZE);
+  if(preserved.length>=STARTER_LINEUP_SIZE) return {...state, roster, lineup: preserved};
+
   const usedIds = new Set(preserved.map(p=>p.id));
   const rest = roster.filter(p=>!usedIds.has(p.id));
   // Top up the preserved lineup in a position-balanced way rather than just
@@ -87,6 +90,10 @@ export function createInitialState(): GameState {
     formation: "4-3-3",
     upgrades: {attack:0, defense:0, training:0, fans:0},
     teamName: DEFAULT_TEAM_NAME, teamColor: DEFAULT_TEAM_COLOR,
+    freeNameChangeUsed: false,
+    freeColorChangeUsed: false,
+    adsRemoved: false,
+    speed3Unlocked: false,
     league: startNewSeason(STARTING_LEAGUE_TIER, {id:PLAYER_TEAM_ID, name:DEFAULT_TEAM_NAME, color:DEFAULT_TEAM_COLOR}),
     market: makeMarket(STARTING_LEAGUE_TIER),
     passiveRate: 10,
@@ -158,6 +165,14 @@ export function gameReducer(state:GameState, action:GameAction): GameState {
       };
     }
 
+    case PURCHASE_STORE_OFFER:
+      return {
+        ...state,
+        diamonds: state.diamonds+action.diamonds,
+        adsRemoved: state.adsRemoved || !!action.removeAds,
+        speed3Unlocked: state.speed3Unlocked || !!action.removeAds,
+      };
+
     case ADD_REWARD:
       return {...state, coins: state.coins+action.coins, diamonds: state.diamonds+action.diamonds};
 
@@ -175,16 +190,27 @@ export function gameReducer(state:GameState, action:GameAction): GameState {
         league: action.league,
       };
 
-    case SET_TEAM_IDENTITY:
+    case SET_TEAM_IDENTITY: {
+      const diamondCost = action.diamondCost ?? 0;
+      if(state.diamonds < diamondCost) return state;
       return {
         ...state,
+        diamonds: state.diamonds-diamondCost,
         teamName: action.name,
         teamColor: action.color,
+        freeNameChangeUsed: state.freeNameChangeUsed || !!action.markNameChange,
+        freeColorChangeUsed: state.freeColorChangeUsed || !!action.markColorChange,
         league: {
           ...state.league,
           teams: state.league.teams.map(t=>t.isPlayer ? {...t, name:action.name, color:action.color} : t),
         },
       };
+    }
+
+    case UNLOCK_SPEED_3X:
+      if(state.speed3Unlocked) return state;
+      if(state.diamonds < action.cost) return state;
+      return {...state, diamonds: state.diamonds-action.cost, speed3Unlocked:true};
 
     case CLEAR_OFFLINE_REWARD:
       return {...state, pendingOfflineReward:null};

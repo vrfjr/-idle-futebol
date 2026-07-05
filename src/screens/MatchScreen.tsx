@@ -1,19 +1,22 @@
-import React, { useRef, useCallback, useMemo, useState } from "react";
-import { Waypoints, Shirt, Users, Crosshair, Radio, Shield } from "lucide-react";
+import React, { useRef, useCallback, useEffect, useMemo, useState } from "react";
+import { Waypoints, Shirt, Users, Crosshair, Radio, Shield, Lock } from "lucide-react";
 import { useGame } from "../store/GameContext";
 import { useMatchSimulation } from "../hooks/useMatchSimulation";
 import { useGameLoop } from "../hooks/useGameLoop";
 import { useDeltaFlash } from "../hooks/useDeltaFlash";
-import { calcPowerBreakdown, passivePerSec } from "../utils/balance";
-import { ResourceBar } from "../components/ResourceBar";
+import { calcPowerBreakdown } from "../utils/balance";
 import { StatShortcut } from "../components/StatShortcut";
 import { LeagueBadge } from "../components/LeagueBadge";
 import { DeltaBadge } from "../components/DeltaBadge";
 import { PowerTooltip } from "../components/PowerTooltip";
 import { LeagueTableScreen } from "./LeagueTableScreen";
+import { MatchEvent } from "../game/matchSim";
 import { colors, radii, shadows, withAlpha } from "../styles/tokens";
 
-interface Props { onToast:(msg:string,bad?:boolean)=>void; onNavigateShop:()=>void; onNavigateTeam:()=>void; }
+interface Props { onToast:(msg:string,bad?:boolean)=>void; onNavigateTeam:()=>void; onNavigateShop:()=>void; }
+
+type MatchSpeed = 1|2|3;
+interface MatchFeedItem { id:string; text:string; tone:string; }
 
 function clamp(v:number, min:number, max:number): number {
   return Math.max(min, Math.min(max, v));
@@ -78,11 +81,13 @@ function StatDuel({
   );
 }
 
-export function MatchScreen({onNavigateShop, onNavigateTeam}:Props) {
+export function MatchScreen({onToast, onNavigateTeam, onNavigateShop}:Props) {
   const {state} = useGame();
   const containerRef = useRef<HTMLDivElement>(null);
-  const {liveScore, setLiveScore} = useGameLoop();
+  const [matchSpeed, setMatchSpeed] = useState<MatchSpeed>(1);
+  const {liveScore, setLiveScore} = useGameLoop(matchSpeed);
   const [showTable, setShowTable] = useState(false);
+  const [matchFeed, setMatchFeed] = useState<MatchFeedItem[]>([]);
 
   const handleGoal = useCallback((home:number,away:number)=>{
     setLiveScore(prev=>({...prev,home,away}));
@@ -96,19 +101,39 @@ export function MatchScreen({onNavigateShop, onNavigateTeam}:Props) {
   const opponent = state.league.teams.find(t=>t.id===opponentId);
   const opponentPower = opponent?.power ?? 45;
   const opponentName = opponent?.name ?? "Rival FC";
-  const simKey = useMemo(()=>[
-    state.formation,
-    state.teamColor,
-    opponentPower,
-    visualLineup.map(p=>`${p.id}:${p.pos}:${p.ovr}:${p.pac}:${p.sho}:${p.pas}:${p.def}:${p.phy}:${p.dri}`).join("|"),
-  ].join("::"), [state.formation, state.teamColor, opponentPower, visualLineup]);
-
-  useMatchSimulation(containerRef, handleGoal, state.teamColor, state.formation, visualLineup, opponentPower, simKey);
-
   const powerBreakdown = calcPowerBreakdown(state.lineup, state.formation, state.upgrades);
   const pwr = powerBreakdown.total;
   const pwrFlash = useDeltaFlash(pwr, 1, d=>`+${Math.round(d)} PODER`);
-  const pps = passivePerSec(state.passiveRate, state.upgrades.fans);
+  const simKey = useMemo(()=>[
+    state.formation,
+    state.teamColor,
+    pwr,
+    opponentPower,
+    visualLineup.map(p=>`${p.id}:${p.pos}:${p.ovr}:${p.pac}:${p.sho}:${p.pas}:${p.def}:${p.phy}:${p.dri}`).join("|"),
+  ].join("::"), [state.formation, state.teamColor, pwr, opponentPower, visualLineup]);
+
+  const formatEvent = useCallback((event:MatchEvent): MatchFeedItem => {
+    const team = event.team ? state.teamName : opponentName;
+    const tone = event.team ? colors.success : colors.danger;
+    const label = event.type==="GOAL" ? `Gol de ${team}` :
+      event.type==="CORNER" ? `Escanteio para ${team}` :
+      event.type==="THROW_IN" ? `Lateral para ${team}` :
+      event.type==="GOAL_KICK" ? `Tiro de meta para ${team}` :
+      event.type==="KICKOFF" ? `Saida de bola: ${team}` :
+      `Disputa vencida por ${team}`;
+    return {id:`${event.frame}-${event.type}-${event.team}`, text:label, tone};
+  }, [opponentName, state.teamName]);
+
+  const handleMatchEvent = useCallback((event:MatchEvent)=>{
+    if(event.type==="KICKOFF" && event.frame<30) return;
+    const item = formatEvent(event);
+    setMatchFeed(prev=>[item, ...prev.filter(p=>p.id!==item.id)].slice(0,4));
+  }, [formatEvent]);
+
+  useEffect(()=>setMatchFeed([]), [simKey]);
+
+  useMatchSimulation(containerRef, handleGoal, state.teamColor, state.formation, visualLineup, opponentPower, simKey, pwr, matchSpeed, handleMatchEvent);
+
   const playerRow = state.league.table.find(r=>r.teamId===playerTeamId);
   const possession = Math.round(clamp(50 + (pwr-opponentPower)/5 + (liveScore.home-liveScore.away)*3, 38, 66));
   const homeShots = Math.max(liveScore.home, Math.floor(liveScore.min/18)+liveScore.home*2+Math.max(1, Math.floor(pwr/60)));
@@ -117,6 +142,14 @@ export function MatchScreen({onNavigateShop, onNavigateTeam}:Props) {
   const awayTarget = Math.min(awayShots, Math.max(liveScore.away, Math.ceil(awayShots*0.48)));
   const homeFouls = Math.max(0, Math.floor(liveScore.min/17) + (opponentPower>pwr ? 2 : 0));
   const awayFouls = Math.max(0, Math.floor(liveScore.min/15) + (pwr>opponentPower ? 2 : 0));
+  const chooseSpeed = (speed:MatchSpeed) => {
+    if(speed===3 && !state.speed3Unlocked){
+      onToast("3x vem com Remover Anuncios na loja.", true);
+      onNavigateShop();
+      return;
+    }
+    setMatchSpeed(speed);
+  };
 
   return (
     <div>
@@ -153,8 +186,52 @@ export function MatchScreen({onNavigateShop, onNavigateTeam}:Props) {
           </div>
         </div>
 
-        <div style={{marginTop:12}}>
-          <ResourceBar coins={state.coins} pps={pps} onAddCoins={onNavigateShop}/>
+      </div>
+
+      <div style={{margin:"0 14px 10px",borderRadius:14,overflow:"hidden",
+        background:`linear-gradient(180deg, ${withAlpha(colors.pitch,"soft")}, #04310f)`,
+        border:`1px solid ${withAlpha(colors.pitch,"medium")}`,
+        boxShadow:"inset 0 0 0 1px rgba(255,255,255,0.04), inset 0 6px 14px rgba(0,0,0,0.45), 0 4px 10px rgba(0,0,0,0.35)"}}>
+        <div style={{height:30,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 11px",
+          background:"linear-gradient(180deg, rgba(9,15,30,0.92), rgba(9,15,30,0.55))"}}>
+          <div style={{fontSize:10,color:colors.cyan,fontWeight:900,letterSpacing:1.1,display:"flex",alignItems:"center",gap:5}}>
+            <Crosshair size={12}/> CAMERA TATICA
+          </div>
+          <div style={{display:"flex",gap:3}}>
+            {([1,2,3] as MatchSpeed[]).map(speed=>{
+              const locked = speed===3 && !state.speed3Unlocked;
+              const active = matchSpeed===speed;
+              return (
+                <button key={speed} onClick={()=>chooseSpeed(speed)}
+                  style={{height:21,minWidth:29,borderRadius:6,border:`1px solid ${active?colors.warning:withAlpha(colors.cyan,"soft")}`,
+                    background:active?withAlpha(colors.warning,"soft"):withAlpha(colors.bgDeep,"strong"),
+                    color:active?colors.warning:colors.textSecondary,fontFamily:"inherit",fontSize:10,fontWeight:900,
+                    display:"inline-flex",alignItems:"center",justifyContent:"center",gap:2,cursor:"pointer",padding:"0 5px"}}>
+                  {locked&&<Lock size={9}/>} {speed}x
+                </button>
+              );
+            })}
+          </div>
+          <PowerTooltip breakdown={powerBreakdown} align="right">
+            <div style={{fontSize:10,color:colors.success,fontWeight:900,letterSpacing:1,position:"relative"}}>
+              PODER {pwr}
+              {pwrFlash && <DeltaBadge keyId={pwrFlash.id} value={pwrFlash.text} color={colors.success}/>}
+            </div>
+          </PowerTooltip>
+        </div>
+        <div ref={containerRef} style={{width:"100%"}}/>
+      </div>
+
+      <div style={{margin:"0 14px 10px",borderRadius:radii.card,border:`1px solid ${withAlpha(colors.cyan,"soft")}`,
+        background:withAlpha(colors.bgDeep,"strong"),padding:"8px 10px"}}>
+        <div style={{fontSize:10,color:colors.cyan,fontWeight:900,letterSpacing:1,marginBottom:5}}>LANCE A LANCE</div>
+        <div style={{display:"flex",flexDirection:"column",gap:4}}>
+          {(matchFeed.length?matchFeed:[{id:"empty",text:"Aguardando primeiro lance...",tone:colors.textMuted}]).map(item=>(
+            <div key={item.id} style={{display:"flex",alignItems:"center",gap:6,fontSize:10,color:colors.textSecondary,fontWeight:800}}>
+              <span style={{width:6,height:6,borderRadius:"50%",background:item.tone,flexShrink:0}}/>
+              <span style={{whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{item.text}</span>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -169,25 +246,6 @@ export function MatchScreen({onNavigateShop, onNavigateTeam}:Props) {
           <StatDuel label="POSSE" home={possession} away={100-possession} homeDisplay={`${possession}%`} awayDisplay={`${100-possession}%`}/>
           <StatDuel label="FALTAS" home={homeFouls} away={awayFouls}/>
         </div>
-      </div>
-
-      <div style={{margin:"0 14px 10px",borderRadius:14,overflow:"hidden",
-        background:`linear-gradient(180deg, ${withAlpha(colors.pitch,"soft")}, #04310f)`,
-        border:`1px solid ${withAlpha(colors.pitch,"medium")}`,
-        boxShadow:"inset 0 0 0 1px rgba(255,255,255,0.04), inset 0 6px 14px rgba(0,0,0,0.45), 0 4px 10px rgba(0,0,0,0.35)"}}>
-        <div style={{height:30,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 11px",
-          background:"linear-gradient(180deg, rgba(9,15,30,0.92), rgba(9,15,30,0.55))"}}>
-          <div style={{fontSize:10,color:colors.cyan,fontWeight:900,letterSpacing:1.1,display:"flex",alignItems:"center",gap:5}}>
-            <Crosshair size={12}/> CAMERA TATICA
-          </div>
-          <PowerTooltip breakdown={powerBreakdown} align="right">
-            <div style={{fontSize:10,color:colors.success,fontWeight:900,letterSpacing:1,position:"relative"}}>
-              PODER {pwr}
-              {pwrFlash && <DeltaBadge keyId={pwrFlash.id} value={pwrFlash.text} color={colors.success}/>}
-            </div>
-          </PowerTooltip>
-        </div>
-        <div ref={containerRef} style={{width:"100%"}}/>
       </div>
 
       <div style={{display:"flex",gap:6,margin:"0 14px 10px"}}>

@@ -1,4 +1,5 @@
 import { FieldSlot, FORMATION_TEMPLATES } from "../constants/formations";
+import { POSITION_WEIGHTS } from "../constants/positions";
 import { FormationKey, Player, PositionKey } from "../types";
 
 export interface AssignedFieldSlot extends FieldSlot {
@@ -9,6 +10,10 @@ export const ALL_POSITIONS: PositionKey[] = ["GOL","ZAG","LD","LE","VOL","MC","M
 
 function emptyCounts(): Record<PositionKey, number> {
   return {GOL:0, ZAG:0, LD:0, LE:0, VOL:0, MC:0, MEI:0, PD:0, PE:0, SA:0, CA:0};
+}
+
+function templateSlots(formation:FormationKey): FieldSlot[] {
+  return FORMATION_TEMPLATES[formation].map((role,idx)=>({x:0, y:0, num:idx+1, role, line:0}));
 }
 
 // Trivial now that formations are explicit templates (constants/formations.ts)
@@ -62,6 +67,19 @@ export function slotEfficiency(player:Player|undefined, slotRole:PositionKey): n
   return getPositionCompatibility(player.pos, slotRole);
 }
 
+export function scorePlayerForRole(player:Player, slotRole:PositionKey): number {
+  const w = POSITION_WEIGHTS[slotRole];
+  const roleRating =
+    player.pac*w.pac +
+    player.sho*w.sho +
+    player.pas*w.pas +
+    player.def*w.def +
+    player.phy*w.phy +
+    player.dri*w.dri;
+
+  return roleRating * getPositionCompatibility(player.pos, slotRole);
+}
+
 export function positionStatus(player:Player|undefined, slotRole:PositionKey): {label:string;efficiency:number;colorKey:"success"|"warning"|"danger"} {
   const efficiency = slotEfficiency(player, slotRole);
   if(efficiency>=1) return {label:"Natural", efficiency, colorKey:"success"};
@@ -71,43 +89,106 @@ export function positionStatus(player:Player|undefined, slotRole:PositionKey): {
 }
 
 export function assignPlayersToSlots(lineup:Player[], slots:FieldSlot[]): AssignedFieldSlot[] {
-  const used = new Set<string>();
+  const players = lineup.slice(0, slots.length);
+  const memo = new Map<string, {score:number; picks:(number|null)[]}>();
 
-  return slots.map(slot=>{
-    const exact = lineup.find(p=>!used.has(p.id) && p.pos===slot.role);
-    const fallback = lineup.find(p=>!used.has(p.id));
-    const player = exact ?? fallback;
-    if(player) used.add(player.id);
-    return {...slot, player};
-  });
+  const countUsed = (mask:number): number => {
+    let count = 0;
+    for(let m=mask; m>0; m>>=1) count += m&1;
+    return count;
+  };
+
+  const best = (slotIdx:number, usedMask:number): {score:number; picks:(number|null)[]} => {
+    const key = `${slotIdx}:${usedMask}`;
+    const cached = memo.get(key);
+    if(cached) return cached;
+    if(slotIdx>=slots.length) return {score:0, picks:[]};
+
+    const remainingSlots = slots.length-slotIdx;
+    const remainingPlayers = players.length-countUsed(usedMask);
+    let result: {score:number; picks:(number|null)[]} = {score:-Infinity, picks:[]};
+
+    if(remainingSlots>remainingPlayers){
+      const skipped = best(slotIdx+1, usedMask);
+      result = {score:skipped.score, picks:[null, ...skipped.picks]};
+    }
+
+    players.forEach((player,playerIdx)=>{
+      const bit = 1<<playerIdx;
+      if(usedMask&bit) return;
+      const roleScore = scorePlayerForRole(player, slots[slotIdx].role);
+      const exactBonus = player.pos===slots[slotIdx].role ? 8 : 0;
+      const next = best(slotIdx+1, usedMask|bit);
+      const candidate = {
+        score: roleScore+exactBonus+next.score,
+        picks: [playerIdx, ...next.picks],
+      };
+      if(candidate.score>result.score) result = candidate;
+    });
+
+    memo.set(key, result);
+    return result;
+  };
+
+  const assignment = best(0, 0).picks;
+  return slots.map((slot,idx)=>({
+    ...slot,
+    player: assignment[idx]===null || assignment[idx]===undefined ? undefined : players[assignment[idx] as number],
+  }));
 }
 
 // Picks up to 11 players from the roster that actually fit the formation's
-// position needs (1 GOL, formation-specific ZAG/MEI/ATA counts) instead of
-// just grabbing however the roster happens to be ordered — avoids ending up
-// with e.g. 3 goalkeepers in a fresh starting XI purely by random luck.
+// explicit slot template. Each slot uses role-specific attribute weights plus
+// out-of-position compatibility, so "Melhor escalacao" means best fit for
+// LD/ZAG/MEI/CA etc., not simply first available by broad position.
 // `existing` lets a caller top up an already-chosen partial lineup (e.g. when
 // migrating an old save) without losing track of positions it already fills.
 export function pickBalancedLineup(roster:Player[], formation:FormationKey, existing:Player[]=[]): Player[] {
   const targets = formationTargets(formation);
   const used = new Set(existing.map(p=>p.id));
   const lineup: Player[] = [...existing];
+  const template = FORMATION_TEMPLATES[formation];
 
-  (Object.keys(targets) as (keyof typeof targets)[]).forEach(pos=>{
-    const need = targets[pos] - existing.filter(p=>p.pos===pos).length;
-    if(need<=0) return;
-    roster
-      .filter(p=>p.pos===pos && !used.has(p.id))
-      .slice(0, need)
-      .forEach(p=>{ lineup.push(p); used.add(p.id); });
+  const remainingTargets = {...targets};
+  existing.forEach(p=>{
+    if(remainingTargets[p.pos]>0) remainingTargets[p.pos]--;
   });
 
-  for(const p of roster){
+  const neededRoles: PositionKey[] = [];
+  template.forEach(role=>{
+    if(remainingTargets[role]>0){
+      neededRoles.push(role);
+      remainingTargets[role]--;
+    }
+  });
+
+  const availableFor = (role:PositionKey) => roster.filter(p=>!used.has(p.id) && scorePlayerForRole(p, role)>0);
+  const rolePressure = (role:PositionKey) => availableFor(role).filter(p=>p.pos===role).length || availableFor(role).length;
+  neededRoles.sort((a,b)=>rolePressure(a)-rolePressure(b));
+
+  neededRoles.forEach(role=>{
+    if(lineup.length>=11) return;
+    const best = availableFor(role)
+      .sort((a,b)=>scorePlayerForRole(b, role)-scorePlayerForRole(a, role) || b.ovr-a.ovr)[0];
+    if(best){
+      lineup.push(best);
+      used.add(best.id);
+    }
+  });
+
+  const bestAnyRoleScore = (p:Player) => Math.max(...template.map(role=>scorePlayerForRole(p, role)));
+  const remaining = roster
+    .filter(p=>!used.has(p.id))
+    .sort((a,b)=>bestAnyRoleScore(b)-bestAnyRoleScore(a) || b.ovr-a.ovr);
+
+  for(const p of remaining){
     if(lineup.length>=11) break;
     if(!used.has(p.id)){ lineup.push(p); used.add(p.id); }
   }
 
-  return lineup;
+  return assignPlayersToSlots(lineup, templateSlots(formation))
+    .map(slot=>slot.player)
+    .filter((player): player is Player=>!!player);
 }
 
 export function validateLineup(lineup:Player[], formation:FormationKey): string[] {

@@ -1,43 +1,48 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useGame } from "../store/GameContext";
 import { RESOLVE_ROUND } from "../store/actions";
 import { calcPower } from "../utils/balance";
 import { resolveRound } from "../utils/league";
 import { LiveScore } from "../types";
 
-export function useGameLoop() {
+export function useGameLoop(speed=1) {
   const { state, dispatch } = useGame();
-  const [liveScore, setLiveScore] = useState<LiveScore>({home:0,away:0,min:0});
+  const [liveScore, setLiveScore] = useState<LiveScore>({home:0, away:0, min:0});
+  const safeSpeed = Math.max(1, Math.min(3, Math.round(speed)));
 
-  // Ref always holds the latest state — avoids stale closures in the intervals
-  // without causing the intervals to be recreated on every render.
   const stateRef = useRef(state);
-  stateRef.current = state;
+  const speedRef = useRef(safeSpeed);
+  const elapsedRef = useRef(0);
 
-  // Resolve one full league round every 45 seconds
+  stateRef.current = state;
+  speedRef.current = safeSpeed;
+
   useEffect(()=>{
+    const tickMs = 250;
     const id = setInterval(()=>{
       if(document.visibilityState==="hidden") return;
-      const s = stateRef.current;
-      const pwr = calcPower(s.lineup, s.formation, s.upgrades);
-      const playerId = s.league.teams.find(t=>t.isPlayer)!.id;
-      const {league, playerResult, reward, diamondReward} = resolveRound(s.league, playerId, pwr);
-      dispatch({ type:RESOLVE_ROUND, league, result:playerResult, reward, diamondReward });
-    }, 45000);
+
+      elapsedRef.current += tickMs*speedRef.current;
+
+      if(elapsedRef.current>=45000){
+        elapsedRef.current %= 45000;
+
+        const s = stateRef.current;
+        const pwr = calcPower(s.lineup, s.formation, s.upgrades);
+        const playerId = s.league.teams.find(t=>t.isPlayer)!.id;
+        const {league, playerResult, reward, diamondReward} = resolveRound(s.league, playerId, pwr);
+
+        dispatch({type:RESOLVE_ROUND, league, result:playerResult, reward, diamondReward});
+        setLiveScore({home:0, away:0, min:0});
+        return;
+      }
+
+      const min = Math.min(89, Math.floor((elapsedRef.current/45000)*90));
+      setLiveScore(prev=>prev.min===min ? prev : {...prev, min});
+    }, tickMs);
+
     return ()=>clearInterval(id);
-  // dispatch is stable (React guarantee); no other deps needed — stateRef handles state
   }, [dispatch]);
 
-  // Live match minute timer (0-90 min mapped over 45 real seconds)
-  useEffect(()=>{
-    let t = 0;
-    const id = setInterval(()=>{
-      if(document.visibilityState==="hidden") return;
-      t = (t+1) % 45;
-      setLiveScore(prev=>({...prev, min: Math.floor(t*2)}));
-    }, 1000);
-    return ()=>clearInterval(id);
-  }, []);
-
-  return { liveScore, setLiveScore };
+  return {liveScore, setLiveScore};
 }

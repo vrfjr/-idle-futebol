@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { LazyMotion, m, AnimatePresence } from "framer-motion";
-import { CircleDot, Shirt, ShoppingCart, Gem, TrendingUp, LucideIcon, Trophy, Zap } from "lucide-react";
+import { CircleDot, Shirt, ShoppingCart, Gem, TrendingUp, LucideIcon, Trophy, Zap, Coins } from "lucide-react";
 import { GameProvider, useGame } from "./store/GameContext";
 import { usePassiveIncome } from "./hooks/usePassiveIncome";
-import { calcPower, upgCost } from "./utils/balance";
+import { calcPowerBreakdown, passivePerSec, upgCost } from "./utils/balance";
 import { fmt } from "./utils/helpers";
 import { CLEAR_OFFLINE_REWARD } from "./store/actions";
 import { MatchScreen } from "./screens/MatchScreen";
@@ -13,6 +13,10 @@ import { ShopScreen } from "./screens/ShopScreen";
 import { UpgradesScreen } from "./screens/UpgradesScreen";
 import { Toast } from "./components/Toast";
 import { BottomNavItem } from "./components/BottomNavItem";
+import { DeltaBadge } from "./components/DeltaBadge";
+import { PowerTooltip } from "./components/PowerTooltip";
+import { LeagueTableScreen } from "./screens/LeagueTableScreen";
+import { useDeltaFlash } from "./hooks/useDeltaFlash";
 import { colors, shadows, withAlpha } from "./styles/tokens";
 import "./index.css";
 
@@ -32,6 +36,7 @@ function GameApp() {
   const { state, dispatch } = useGame();
   const [tab, setTab] = useState<Tab>("match");
   const [toast, setToast] = useState<{msg:string;bad:boolean}|null>(null);
+  const [showLeague, setShowLeague] = useState(false);
 
   usePassiveIncome();
 
@@ -47,7 +52,11 @@ function GameApp() {
   }, [state.pendingOfflineReward, notify, dispatch]);
 
   const upgradeAvailable = Object.values(state.upgrades).some(lvl=>state.coins>=upgCost(lvl));
-  const power = calcPower(state.lineup, state.formation, state.upgrades);
+  const powerBreakdown = calcPowerBreakdown(state.lineup, state.formation, state.upgrades);
+  const power = powerBreakdown.total;
+  const pps = passivePerSec(state.passiveRate, state.upgrades.fans);
+  const coinFlash = useDeltaFlash(state.coins, pps+1);
+  const playerTeamId = state.league.teams.find(t=>t.isPlayer)?.id ?? "player";
 
   return (
     <LazyMotion features={loadFeatures} strict>
@@ -75,21 +84,34 @@ function GameApp() {
                 {state.teamName}
               </div>
             </div>
-            <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
-              <div style={{border:`1px solid ${withAlpha(colors.warning,"medium")}`,background:withAlpha(colors.warning,"subtle"),
-                borderRadius:9,padding:"5px 7px",minWidth:48,textAlign:"center"}}>
+            <div style={{display:"flex",alignItems:"center",gap:5,flexShrink:0}}>
+              <div style={{position:"relative",border:`1px solid ${withAlpha(colors.warning,"medium")}`,background:withAlpha(colors.warning,"subtle"),
+                borderRadius:9,padding:"5px 7px",minWidth:66,textAlign:"center"}}>
+                <div style={{fontSize:8,color:colors.textMuted,fontWeight:800,letterSpacing:0.7}}>SALDO</div>
+                <div style={{fontSize:12,color:colors.warning,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center",gap:3,lineHeight:1.05}}>
+                  <Coins size={11}/> {fmt(state.coins)}
+                </div>
+                <div style={{fontSize:11,color:colors.cyan,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center",gap:3,lineHeight:1.05,marginTop:2}}>
+                  <Gem size={10}/> {state.diamonds}
+                </div>
+                {coinFlash && <DeltaBadge keyId={coinFlash.id} value={coinFlash.text} color={colors.warning}/>}
+              </div>
+              <button onClick={()=>setShowLeague(true)} style={{border:`1px solid ${withAlpha(colors.warning,"medium")}`,background:withAlpha(colors.warning,"subtle"),
+                borderRadius:9,padding:"5px 7px",minWidth:48,textAlign:"center",fontFamily:"inherit",cursor:"pointer"}}>
                 <div style={{fontSize:8,color:colors.textMuted,fontWeight:800,letterSpacing:0.7}}>LIGA</div>
                 <div style={{fontSize:13,color:colors.warning,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center",gap:3}}>
                   <Trophy size={11}/> {state.league.tier}
                 </div>
-              </div>
-              <div style={{border:`1px solid ${withAlpha(colors.success,"medium")}`,background:withAlpha(colors.success,"subtle"),
-                borderRadius:9,padding:"5px 7px",minWidth:58,textAlign:"center"}}>
-                <div style={{fontSize:8,color:colors.textMuted,fontWeight:800,letterSpacing:0.7}}>PODER</div>
-                <div style={{fontSize:13,color:colors.success,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center",gap:3}}>
-                  <Zap size={11}/> {power}
+              </button>
+              <PowerTooltip breakdown={powerBreakdown} align="right">
+                <div style={{border:`1px solid ${withAlpha(colors.success,"medium")}`,background:withAlpha(colors.success,"subtle"),
+                  borderRadius:9,padding:"5px 7px",minWidth:58,textAlign:"center"}}>
+                  <div style={{fontSize:8,color:colors.textMuted,fontWeight:800,letterSpacing:0.7}}>PODER</div>
+                  <div style={{fontSize:13,color:colors.success,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center",gap:3}}>
+                    <Zap size={11}/> {power}
+                  </div>
                 </div>
-              </div>
+              </PowerTooltip>
             </div>
           </div>
         </header>
@@ -97,7 +119,7 @@ function GameApp() {
         <div style={{position:"relative",zIndex:1,flex:1,overflowY:"auto",paddingBottom:"calc(64px + env(safe-area-inset-bottom))"}}>
           <AnimatePresence mode="wait">
             <m.div key={tab} initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-8}} transition={{duration:0.18}}>
-              {tab==="match"    && <MatchScreen    onToast={notify} onNavigateShop={()=>setTab("shop")} onNavigateTeam={()=>setTab("team")}/>}
+              {tab==="match"    && <MatchScreen    onToast={notify} onNavigateTeam={()=>setTab("team")} onNavigateShop={()=>setTab("shop")}/>}
               {tab==="team"     && <TeamScreen     onToast={notify}/>}
               {tab==="market"   && <MarketScreen   onToast={notify}/>}
               {tab==="shop"     && <ShopScreen     onToast={notify}/>}
@@ -115,6 +137,10 @@ function GameApp() {
               onClick={()=>setTab(n.key)} badge={n.key==="upgrades" && upgradeAvailable}/>
           ))}
         </nav>
+
+        {showLeague && (
+          <LeagueTableScreen league={state.league} playerTeamId={playerTeamId} onClose={()=>setShowLeague(false)}/>
+        )}
       </div>
     </LazyMotion>
   );

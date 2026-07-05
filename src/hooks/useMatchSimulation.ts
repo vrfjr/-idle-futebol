@@ -1,11 +1,11 @@
-import { useEffect, RefObject } from "react";
+import { useEffect, RefObject, useRef } from "react";
 import { Application, Graphics, Sprite, Text, TextStyle } from "pixi.js";
-import { createSim, stepSimulation, Sim } from "../game/matchSim";
+import { createSim, stepSimulation, Sim, MatchEvent } from "../game/matchSim";
 import { getPlayerTexture, getBallTexture, SPRITE_SCALE, RUN_FRAME_COUNT, FRAME_KICK, FRAME_TACKLE } from "../game/pixelSprites";
 import { FormationKey, Player } from "../types";
 import { colors, withAlpha } from "../styles/tokens";
 
-const W = 480, H = 294;
+const W = 680, H = 416;
 const LINE = "rgba(255,255,255,0.18)";
 const GOAL_LINE = "rgba(255,255,255,0.55)";
 
@@ -38,7 +38,18 @@ export function useMatchSimulation(
   lineup: Player[] = [],
   opponentPower = 45,
   simKey = "",
+  homePower?: number,
+  speed=1,
+  onEvent?: (event:MatchEvent)=>void,
 ): void {
+  const speedRef = useRef(speed);
+  const onEventRef = useRef(onEvent);
+
+  useEffect(()=>{
+    speedRef.current = speed;
+    onEventRef.current = onEvent;
+  }, [speed, onEvent]);
+
   useEffect(()=>{
     const container = containerRef.current;
     if(!container) return;
@@ -64,7 +75,7 @@ export function useMatchSimulation(
 
       app.stage.addChild(drawPitch());
 
-      const sim: Sim = createSim(W, H, formation, lineup, opponentPower);
+      const sim: Sim = createSim(W, H, formation, lineup, opponentPower, {homePower});
 
       const allAgentsForShadows = [...sim.home, ...sim.away];
       const groundShadows = allAgentsForShadows.map(()=>{
@@ -118,6 +129,8 @@ export function useMatchSimulation(
       flashText.position.set(W/2, H/2);
       flashText.visible = false;
       app.stage.addChild(flashText);
+      let lastEventFrame = -1;
+      let lastEventType = "";
 
       const syncSprites = () => {
         sim.home.forEach((p,i)=>homeSprites[i].position.set(p.x,p.y));
@@ -152,7 +165,15 @@ export function useMatchSimulation(
 
       const tick = () => {
         if(document.visibilityState!=="hidden"){
-          stepSimulation(sim, W, H, onGoal);
+          const steps = Math.max(1, Math.min(3, Math.round(speedRef.current)));
+          for(let i=0;i<steps;i++){
+            stepSimulation(sim, W, H, onGoal);
+            if(sim.lastEvent && (sim.lastEvent.frame!==lastEventFrame || sim.lastEvent.type!==lastEventType)){
+              lastEventFrame = sim.lastEvent.frame;
+              lastEventType = sim.lastEvent.type;
+              onEventRef.current?.(sim.lastEvent);
+            }
+          }
           syncSprites();
         }
         rafId = requestAnimationFrame(tick);
@@ -167,5 +188,5 @@ export function useMatchSimulation(
         app.destroy({removeView:true}, {children:true, texture:false, textureSource:false});
       }
     };
-  }, [containerRef, onGoal, homeColor, formation, lineup, opponentPower, simKey]);
+  }, [containerRef, onGoal, homeColor, formation, lineup, opponentPower, simKey, homePower]);
 }

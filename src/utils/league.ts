@@ -28,7 +28,7 @@ function shuffle<T>(arr:T[]): T[] {
 export function basePower(tier:number): number {
   const clamped = Math.max(BEST_LEAGUE_TIER, Math.min(STARTING_LEAGUE_TIER, Math.round(tier)));
   const prestige = STARTING_LEAGUE_TIER + 1 - clamped;
-  return 34 + prestige*3.5;
+  return 26 + prestige*4.5;
 }
 
 export function makeCpuTeams(tier:number, count=17): LeagueTeam[] {
@@ -37,7 +37,7 @@ export function makeCpuTeams(tier:number, count=17): LeagueTeam[] {
     id: `cpu${tier}_${i}_${Date.now().toString(36)}${i}`,
     name,
     color: CPU_COLORS[i % CPU_COLORS.length],
-    power: Math.round(basePower(tier) * (0.9 + Math.random()*0.25)),
+    power: Math.round(basePower(tier) * (0.78 + Math.random()*0.44)),
     isPlayer: false,
   }));
 }
@@ -85,11 +85,21 @@ export function startNewSeason(tier:number, playerTeam:{id:string;name:string;co
   };
 }
 
-function simScoreline(result:MatchResult): [number,number] {
+function winnerScoreline(winnerPower:number, loserPower:number): [number,number] {
+  const diff = winnerPower-loserPower;
+  const upset = diff < -12;
+  const maxExtra = upset ? 1 : Math.max(1, Math.min(4, Math.floor(1+Math.max(0, diff)/22)));
+  const winner = 1+Math.floor(Math.random()*maxExtra);
+  const loserCap = upset ? 1 : Math.max(0, winner-1);
+  const loser = Math.max(0, Math.min(loserCap, Math.floor(Math.random()*(loserCap+1))));
+  return [winner, loser];
+}
+
+function simScoreline(result:MatchResult, homePower:number, awayPower:number): [number,number] {
   if(result==="draw"){ const g=Math.floor(Math.random()*3); return [g,g]; }
-  const winner = 1+Math.floor(Math.random()*3);
-  const loser = Math.max(0, winner-1-Math.floor(Math.random()*winner));
-  return result==="win" ? [winner,loser] : [loser,winner];
+  if(result==="win") return winnerScoreline(homePower, awayPower);
+  const [ag,hg] = winnerScoreline(awayPower, homePower);
+  return [hg, ag];
 }
 
 function applyResult(table:StandingRow[], homeId:string, awayId:string, hg:number, ag:number): void {
@@ -148,8 +158,10 @@ export function resolveRound(league:LeagueState, playerId:string, playerPower:nu
   let reward = 0, diamondReward = 0;
 
   round.forEach(fx=>{
-    const result = simulateMatch(powerOf(fx.home), powerOf(fx.away));
-    const [hg,ag] = simScoreline(result);
+    const homePower = powerOf(fx.home);
+    const awayPower = powerOf(fx.away);
+    const result = simulateMatch(homePower, awayPower);
+    const [hg,ag] = simScoreline(result, homePower, awayPower);
     applyResult(table, fx.home, fx.away, hg, ag);
     if(fx.home===playerId || fx.away===playerId){
       const isHome = fx.home===playerId;

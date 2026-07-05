@@ -6,6 +6,9 @@ declare function afterEach(fn:()=>void|Promise<void>): void;
 interface TestMatchers {
   toBe(expected:unknown): void;
   toEqual(expected:unknown): void;
+  toHaveLength(expected:number): void;
+  toBeGreaterThanOrEqual(expected:number): void;
+  toBeLessThanOrEqual(expected:number): void;
   toBeNull(): void;
   not: TestMatchers;
 }

@@ -70,7 +70,7 @@ export function fieldLayout(formation:FormationKey, isHome:boolean, W:number, H:
     const withinIdx = occurrences.indexOf(idx);
     const count = occurrences.length;
     const spreadStep = count>1 ? (withinIdx - (count-1)/2) * H*0.24 : 0;
-    const y = clamp(H*0.5 + lane.side*H*0.42 + spreadStep, H*0.06, H*0.94);
+    const y = clamp(H*0.5 + lane.side*H*0.42 + spreadStep, H*0.12, H*0.88);
     const line = Math.max(1, Math.round(lane.depth*6));
 
     return {x:W*xp, y, num:idx+1, role, line};

@@ -20,6 +20,48 @@ export function PlayerCard({player,compact=false,showStats=false,onAction,action
     ["DRI",player.dri,colors.warning],
   ];
 
+  if(compact){
+    const shortStats = showStats ? stats.slice(0, 4) : [];
+    return (
+      <div style={{background:colors.panel,border:`1px solid ${withAlpha(colors.borderBright,"soft")}`,
+        borderLeft:`2px solid ${rc.c}`,borderRadius:radii.button,padding:"7px 8px",
+        display:"grid",gridTemplateColumns:"34px 1fr auto",alignItems:"center",gap:8}}>
+        <div style={{width:30,height:30,borderRadius:radii.tag,background:withAlpha(rc.c,"subtle"),
+          display:"flex",alignItems:"center",justifyContent:"center",
+          fontSize:10,fontWeight:900,color:rc.c,flexShrink:0,letterSpacing:0.4}}>
+          {player.pos}
+        </div>
+        <div style={{minWidth:0}}>
+          <div style={{display:"flex",alignItems:"center",gap:6,minWidth:0}}>
+            <span style={{fontSize:12,fontWeight:900,color:colors.textHeading,
+              whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",letterSpacing:0}}>
+              {player.name}
+            </span>
+            <span style={{fontSize:9,color:rc.c,fontWeight:900,textTransform:"uppercase",whiteSpace:"nowrap"}}>
+              {rc.label}
+            </span>
+            <span style={{fontSize:10,color:colors.textSecondary,fontWeight:900,whiteSpace:"nowrap"}}>OVR {player.ovr}</span>
+          </div>
+          {shortStats.length>0&&(
+            <div style={{display:"flex",gap:7,marginTop:3,whiteSpace:"nowrap",overflow:"hidden"}}>
+              {shortStats.map(([l,v,c])=>(
+                <span key={l} style={{fontSize:9,color:c,fontWeight:900,letterSpacing:0}}>
+                  {l} {v}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+        {onAction&&actionLabel&&(
+          <GameButton onClick={onAction} variant="secondary" color={actionColor} size="sm"
+            style={{flexShrink:0, whiteSpace:"nowrap", fontSize:10, padding:"5px 9px"}}>
+            {actionLabel}
+          </GameButton>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div style={{background:colors.surface,border:`1px solid ${withAlpha(rc.c,"border")}`,borderLeft:`3px solid ${rc.c}`,
       borderRadius:radii.card,padding:compact?"9px 12px":"13px 14px",display:"flex",alignItems:"center",gap:10}}>
