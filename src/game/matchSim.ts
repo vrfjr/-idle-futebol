@@ -1494,7 +1494,17 @@ function tickAgentTimers(sim: Sim): void {
 
   if (sim.pendingPass) {
     sim.pendingPass.framesLeft -= 1;
-    if (sim.pendingPass.framesLeft <= 0) sim.pendingPass = null;
+    if (sim.pendingPass.framesLeft <= 0) {
+      // The pass has traveled its expected distance and should be arriving/
+      // being cushioned near the receiver — without this, an uncontrolled
+      // pass just kept sailing at full speed indefinitely (only the
+      // probabilistic pickup in tryControlLooseBall() could ever stop it),
+      // which meant a lot of passes nobody quite reached ended up rolling
+      // all the way out of bounds instead of settling near the target.
+      sim.ball.vx *= 0.22;
+      sim.ball.vy *= 0.22;
+      sim.pendingPass = null;
+    }
   }
 }
 
