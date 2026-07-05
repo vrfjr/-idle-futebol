@@ -31,7 +31,8 @@ function drawPitch(): Graphics {
 
 export function useMatchSimulation(
   containerRef: RefObject<HTMLDivElement>,
-  onGoal: (home:number, away:number)=>void
+  onGoal: (home:number, away:number)=>void,
+  homeColor: string = colors.primary
 ): void {
   useEffect(()=>{
     const container = containerRef.current;
@@ -76,14 +77,14 @@ export function useMatchSimulation(
         s.scale.set(SPRITE_SCALE);
         return s;
       };
-      const homeSprites = sim.home.map(()=>makePlayerSprite(colors.primary));
+      const homeSprites = sim.home.map(()=>makePlayerSprite(homeColor));
       const awaySprites = sim.away.map(()=>makePlayerSprite(colors.rivalDark));
       homeSprites.forEach(s=>app.stage.addChild(s));
       awaySprites.forEach(s=>app.stage.addChild(s));
 
       const allAgents = [...sim.home, ...sim.away];
       const allSprites = [...homeSprites, ...awaySprites];
-      const allJersey = allAgents.map((_,i)=> i<sim.home.length ? colors.primary : colors.rivalDark);
+      const allJersey = allAgents.map((_,i)=> i<sim.home.length ? homeColor : colors.rivalDark);
       const prevX = allAgents.map(p=>p.x);
       const prevY = allAgents.map(p=>p.y);
 
@@ -159,8 +160,9 @@ export function useMatchSimulation(
         app.destroy({removeView:true}, {children:true, texture:false, textureSource:false});
       }
     };
-  // containerRef.current and onGoal are captured once at effect-setup time;
-  // this loop is intentionally not restarted on every re-render.
+  // containerRef.current, onGoal and homeColor are captured once at effect-setup
+  // time; this loop is intentionally not restarted on every re-render (a mid-match
+  // jersey-color change only takes effect next time the Match tab is remounted).
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 }

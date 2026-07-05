@@ -20,7 +20,7 @@ export function MatchScreen({onToast,onNavigateShop}:Props) {
     setLiveScore(prev=>({...prev,home,away}));
   },[setLiveScore]);
 
-  useMatchSimulation(containerRef, handleGoal);
+  useMatchSimulation(containerRef, handleGoal, state.teamColor);
 
   const pwr = calcPower(state.lineup, state.formation, state.upgrades);
   const pps = passivePerSec(state.passiveRate, state.upgrades.fans);
