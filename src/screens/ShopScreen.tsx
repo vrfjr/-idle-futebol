@@ -1,8 +1,9 @@
 import React from "react";
-import { Gem } from "lucide-react";
+import { Gem, AlertTriangle } from "lucide-react";
 import { useGame } from "../store/GameContext";
 import { BUY_PACK } from "../store/actions";
 import { makePlayer } from "../utils/gameLogic";
+import { clearSave, suppressAutosave } from "../services/storage";
 import { PACKS, PackDef } from "../constants/shop";
 import { AccentCard } from "../components/AccentCard";
 import { GameButton } from "../components/GameButton";
@@ -20,6 +21,14 @@ export function ShopScreen({onToast}:Props) {
     const players = pk.rarities ? pk.rarities.map(r=>makePlayer(r)) : Array.from({length:pk.count ?? 0},()=>makePlayer());
     dispatch({type:BUY_PACK,players,cost:pk.cost});
     onToast(`${players.length} jogadores adicionados`);
+  };
+
+  const doResetGame = async ()=>{
+    const confirmed = window.confirm("Isso vai apagar seu time, elenco, moedas e progresso na liga. Essa ação não pode ser desfeita. Reiniciar mesmo assim?");
+    if(!confirmed) return;
+    suppressAutosave();
+    await clearSave();
+    window.location.reload();
   };
 
   return (
@@ -65,6 +74,18 @@ export function ShopScreen({onToast}:Props) {
         <div style={{fontSize:10,color:colors.textMuted,marginBottom:10,lineHeight:1.6}}>Compra única. Bônus disponíveis sem precisar assistir.</div>
         <GameButton onClick={()=>onToast("Anúncios removidos! Obrigado")} variant="primary" fullWidth size="md">
           Comprar — R$ 9,90
+        </GameButton>
+      </div>
+      <div style={{background:withAlpha(colors.danger,"subtle"),border:`1px solid ${withAlpha(colors.danger,"medium")}`,
+        borderRadius:radii.card,padding:"13px 14px",marginTop:14}}>
+        <div style={{display:"flex",alignItems:"center",gap:6,color:colors.danger,fontWeight:800,fontSize:13,marginBottom:3}}>
+          <AlertTriangle size={14}/> Zona de risco
+        </div>
+        <div style={{fontSize:10,color:colors.textMuted,marginBottom:10,lineHeight:1.6}}>
+          Apaga todo o progresso salvo (time, elenco, moedas, liga) e começa um jogo novo.
+        </div>
+        <GameButton onClick={doResetGame} variant="secondary" color={colors.danger} fullWidth size="md">
+          Reiniciar jogo
         </GameButton>
       </div>
     </Screen>

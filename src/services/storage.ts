@@ -4,8 +4,18 @@ import { GameState } from "../types";
 // orphaned rather than migrated (no real users yet, pre-launch).
 const KEY = "football_idle_v2";
 
+// Set right before an intentional wipe (e.g. the "reset game" button) so that
+// no autosave — the 3s interval or the visibilitychange handler, which the
+// reload triggered by that button fires on its way out — can silently write
+// the stale in-memory state back over the clear before the page is gone.
+let suppressed = false;
+export function suppressAutosave(): void {
+  suppressed = true;
+}
+
 // Simple serialization with error handling
 export async function saveGame(data: GameState): Promise<void> {
+  if(suppressed) return;
   try {
     localStorage.setItem(KEY, JSON.stringify(data));
   } catch(e) {
