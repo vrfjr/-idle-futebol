@@ -27,6 +27,15 @@ export interface Upgrades {
   fans: number;
 }
 
+export type OfflineRewardReason = "ok" | "missing_timestamp" | "clock_reversed" | "too_short";
+
+export interface OfflineReward {
+  coins: number;
+  seconds: number;
+  capped: boolean;
+  reason: OfflineRewardReason;
+}
+
 export interface LeagueTeam {
   id: string;
   name: string;
@@ -71,6 +80,8 @@ export interface GameState {
   league: LeagueState;
   market: Player[];
   passiveRate: number;
+  lastSavedAt: number;
+  pendingOfflineReward?: OfflineReward | null;
 }
 
 export interface LiveScore {

@@ -17,6 +17,7 @@ export function useGameLoop() {
   // Resolve one full league round every 45 seconds
   useEffect(()=>{
     const id = setInterval(()=>{
+      if(document.visibilityState==="hidden") return;
       const s = stateRef.current;
       const pwr = calcPower(s.lineup, s.formation, s.upgrades);
       const playerId = s.league.teams.find(t=>t.isPlayer)!.id;
@@ -31,6 +32,7 @@ export function useGameLoop() {
   useEffect(()=>{
     let t = 0;
     const id = setInterval(()=>{
+      if(document.visibilityState==="hidden") return;
       t = (t+1) % 45;
       setLiveScore(prev=>({...prev, min: Math.floor(t*2)}));
     }, 1000);

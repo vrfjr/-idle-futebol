@@ -28,7 +28,7 @@ export function GameProvider({ children }: { children:ReactNode }) {
   // Load saved game on mount only
   useEffect(()=>{
     loadGame().then(data=>{
-      if(data) dispatch({type:"LOAD", payload: data}); // FIX: was `payload` (undefined)
+      if(data) dispatch({type:"LOAD", payload: data, loadedAt: Date.now()}); // FIX: was `payload` (undefined)
       hasLoaded.current = true;
     }).catch(()=>{ hasLoaded.current = true; });
   }, []);

@@ -17,7 +17,11 @@ export function suppressAutosave(): void {
 export async function saveGame(data: GameState): Promise<void> {
   if(suppressed) return;
   try {
-    localStorage.setItem(KEY, JSON.stringify(data));
+    localStorage.setItem(KEY, JSON.stringify({
+      ...data,
+      lastSavedAt: Date.now(),
+      pendingOfflineReward: null,
+    }));
   } catch(e) {
     // QuotaExceededError or similar — fail silently
     console.warn("[storage] saveGame failed:", e);

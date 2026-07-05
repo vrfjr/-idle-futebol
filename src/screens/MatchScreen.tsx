@@ -5,11 +5,9 @@ import { useMatchSimulation } from "../hooks/useMatchSimulation";
 import { useGameLoop } from "../hooks/useGameLoop";
 import { useDeltaFlash } from "../hooks/useDeltaFlash";
 import { calcPowerBreakdown, passivePerSec } from "../utils/balance";
-import { ADD_REWARD } from "../store/actions";
 import { ResourceBar } from "../components/ResourceBar";
 import { StatShortcut } from "../components/StatShortcut";
 import { LeagueBadge } from "../components/LeagueBadge";
-import { RewardButton } from "../components/RewardButton";
 import { DeltaBadge } from "../components/DeltaBadge";
 import { PowerTooltip } from "../components/PowerTooltip";
 import { LeagueTableScreen } from "./LeagueTableScreen";
@@ -80,8 +78,8 @@ function StatDuel({
   );
 }
 
-export function MatchScreen({onToast, onNavigateShop, onNavigateTeam}:Props) {
-  const {state, dispatch} = useGame();
+export function MatchScreen({onNavigateShop, onNavigateTeam}:Props) {
+  const {state} = useGame();
   const containerRef = useRef<HTMLDivElement>(null);
   const {liveScore, setLiveScore} = useGameLoop();
   const [showTable, setShowTable] = useState(false);
@@ -222,9 +220,13 @@ export function MatchScreen({onToast, onNavigateShop, onNavigateTeam}:Props) {
         </div>
       </div>
 
-      <div style={{margin:"0 14px 14px"}}>
-        <RewardButton coins={600} diamonds={3}
-          onClick={()=>{dispatch({type:ADD_REWARD,coins:600,diamonds:3});onToast("+600 moedas e +3 diamantes");}}/>
+      <div style={{margin:"0 14px 14px",borderRadius:radii.card,padding:"11px 13px",
+        background:`linear-gradient(180deg, ${withAlpha(colors.warning,"subtle")}, ${withAlpha(colors.panel,"soft")})`,
+        border:`1px solid ${withAlpha(colors.warning,"border")}`}}>
+        <div style={{fontSize:10,color:colors.warning,fontWeight:900,letterSpacing:1.1}}>RECOMPENSAS</div>
+        <div style={{fontSize:12,color:colors.textSecondary,fontWeight:800,marginTop:3}}>
+          Anuncio recompensado indisponivel nesta versao.
+        </div>
       </div>
 
       {showTable && playerTeamId && (

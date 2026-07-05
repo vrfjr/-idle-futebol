@@ -7,7 +7,7 @@ interface Props { coins:number; diamonds:number; onClick:()=>void; label?:string
 
 const TEXT = "#2a1400";
 
-export function RewardButton({coins, diamonds, onClick, label="ASSISTIR ANÚNCIO"}:Props) {
+export function RewardButton({coins, diamonds, onClick, label="RECOMPENSA"}:Props) {
   const base = colors.warning;
   return (
     <m.button onClick={onClick} whileTap={{scale:0.97, y:1, boxShadow:elevation.pressed(base)}}

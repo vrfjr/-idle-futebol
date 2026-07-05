@@ -11,6 +11,7 @@ export const SET_FORMATION   = "SET_FORMATION"   as const;
 export const SET_LINEUP      = "SET_LINEUP"      as const;
 export const RESOLVE_ROUND   = "RESOLVE_ROUND"   as const;
 export const SET_TEAM_IDENTITY = "SET_TEAM_IDENTITY" as const;
+export const CLEAR_OFFLINE_REWARD = "CLEAR_OFFLINE_REWARD" as const;
 export const LOAD            = "LOAD"            as const;
 
 export type GameAction =
@@ -26,4 +27,5 @@ export type GameAction =
   | {type:typeof SET_LINEUP;     lineup:Player[]}
   | {type:typeof RESOLVE_ROUND;  league:LeagueState; result:MatchResult; reward:number; diamondReward:number}
   | {type:typeof SET_TEAM_IDENTITY; name:string; color:string}
-  | {type:typeof LOAD;           payload:GameState};
+  | {type:typeof CLEAR_OFFLINE_REWARD}
+  | {type:typeof LOAD;           payload:Partial<GameState>; loadedAt:number};

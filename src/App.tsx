@@ -1,9 +1,11 @@
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { LazyMotion, m, AnimatePresence } from "framer-motion";
 import { CircleDot, Shirt, ShoppingCart, Gem, TrendingUp, LucideIcon, Trophy, Zap } from "lucide-react";
 import { GameProvider, useGame } from "./store/GameContext";
 import { usePassiveIncome } from "./hooks/usePassiveIncome";
 import { calcPower, upgCost } from "./utils/balance";
+import { fmt } from "./utils/helpers";
+import { CLEAR_OFFLINE_REWARD } from "./store/actions";
 import { MatchScreen } from "./screens/MatchScreen";
 import { TeamScreen } from "./screens/TeamScreen";
 import { MarketScreen } from "./screens/MarketScreen";
@@ -27,16 +29,22 @@ const NAV:{key:Tab;icon:LucideIcon;label:string}[] = [
 ];
 
 function GameApp() {
-  const { state } = useGame();
+  const { state, dispatch } = useGame();
   const [tab, setTab] = useState<Tab>("match");
   const [toast, setToast] = useState<{msg:string;bad:boolean}|null>(null);
 
   usePassiveIncome();
 
-  const notify = (msg:string, bad=false)=>{
+  const notify = useCallback((msg:string, bad=false)=>{
     setToast({msg,bad});
     setTimeout(()=>setToast(null), 2600);
-  };
+  }, []);
+
+  useEffect(()=>{
+    if(!state.pendingOfflineReward?.coins) return;
+    notify(`+${fmt(state.pendingOfflineReward.coins)} moedas enquanto voce esteve fora`);
+    dispatch({type:CLEAR_OFFLINE_REWARD});
+  }, [state.pendingOfflineReward, notify, dispatch]);
 
   const upgradeAvailable = Object.values(state.upgrades).some(lvl=>state.coins>=upgCost(lvl));
   const power = calcPower(state.lineup, state.formation, state.upgrades);

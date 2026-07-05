@@ -11,6 +11,7 @@ export function usePassiveIncome(): void {
     const rate = state.passiveRate;
     const fans = state.upgrades.fans;
     const id = setInterval(()=>{
+      if(document.visibilityState==="hidden") return;
       dispatch({ type: PASSIVE_INCOME, amount: passivePerSec(rate, fans) });
     }, 1000);
     return ()=>clearInterval(id);

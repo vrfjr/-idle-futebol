@@ -151,8 +151,10 @@ export function useMatchSimulation(
       };
 
       const tick = () => {
-        stepSimulation(sim, W, H, onGoal);
-        syncSprites();
+        if(document.visibilityState!=="hidden"){
+          stepSimulation(sim, W, H, onGoal);
+          syncSprites();
+        }
         rafId = requestAnimationFrame(tick);
       };
       rafId = requestAnimationFrame(tick);

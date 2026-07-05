@@ -1,11 +1,12 @@
 import { GameState, FormationKey, Player } from "../types";
 import { GameAction, PASSIVE_INCOME, BUY_PLAYER, SELL_PLAYER, TOGGLE_SQUAD,
   UPGRADE, REFRESH_MARKET, BUY_PACK, ADD_REWARD, SET_FORMATION, SET_LINEUP, RESOLVE_ROUND,
-  SET_TEAM_IDENTITY, LOAD } from "./actions";
+  SET_TEAM_IDENTITY, CLEAR_OFFLINE_REWARD, LOAD } from "./actions";
 import { makeMarket, makeMarketPlayer, makePlayer } from "../utils/gameLogic";
-import { upgCost } from "../utils/balance";
+import { passivePerSec, upgCost } from "../utils/balance";
 import { STARTING_LEAGUE_TIER, startNewSeason } from "../utils/league";
 import { pickBalancedLineup } from "../utils/lineup";
+import { calculateOfflineIncome } from "../utils/offlineIncome";
 
 export const PLAYER_TEAM_ID = "player";
 const DEFAULT_TEAM_NAME = "Meu Time";
@@ -62,6 +63,20 @@ function ensureStarterRoster(state:GameState): GameState {
   return {...state, roster, lineup};
 }
 
+function applyOfflineIncome(state:GameState, loadedAt:number): GameState {
+  const reward = calculateOfflineIncome(
+    state.lastSavedAt,
+    loadedAt,
+    passivePerSec(state.passiveRate, state.upgrades.fans),
+  );
+  return {
+    ...state,
+    coins: state.coins + reward.coins,
+    lastSavedAt: loadedAt,
+    pendingOfflineReward: reward.coins>0 ? reward : null,
+  };
+}
+
 // FIX: factory function so makePlayer() runs lazily at app start, not at import time
 export function createInitialState(): GameState {
   const roster = createStarterRoster();
@@ -74,6 +89,8 @@ export function createInitialState(): GameState {
     league: startNewSeason(STARTING_LEAGUE_TIER, {id:PLAYER_TEAM_ID, name:DEFAULT_TEAM_NAME, color:DEFAULT_TEAM_COLOR}),
     market: makeMarket(STARTING_LEAGUE_TIER),
     passiveRate: 10,
+    lastSavedAt: Date.now(),
+    pendingOfflineReward: null,
   };
 }
 
@@ -168,9 +185,12 @@ export function gameReducer(state:GameState, action:GameAction): GameState {
         },
       };
 
+    case CLEAR_OFFLINE_REWARD:
+      return {...state, pendingOfflineReward:null};
+
     case LOAD:
       // FIX: merge with initialState defaults so missing fields in saved data don't break the game
-      return ensureStarterRoster({...state, ...action.payload});
+      return applyOfflineIncome(ensureStarterRoster({...state, ...action.payload}), action.loadedAt);
 
     default:
       return state;
