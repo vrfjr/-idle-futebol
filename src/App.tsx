@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { LazyMotion, m, AnimatePresence } from "framer-motion";
-import { CircleDot, Users, ShoppingCart, Gem, TrendingUp, LucideIcon } from "lucide-react";
+import { CircleDot, Shirt, ShoppingCart, Gem, TrendingUp, LucideIcon } from "lucide-react";
 import { GameProvider } from "./store/GameContext";
 import { usePassiveIncome } from "./hooks/usePassiveIncome";
 import { MatchScreen } from "./screens/MatchScreen";
@@ -18,7 +18,7 @@ type Tab = "match"|"team"|"market"|"shop"|"upgrades";
 
 const NAV:{key:Tab;icon:LucideIcon;label:string}[] = [
   {key:"match",    icon:CircleDot,    label:"Partida"},
-  {key:"team",     icon:Users,        label:"Time"},
+  {key:"team",     icon:Shirt,        label:"Time"},
   {key:"market",   icon:ShoppingCart, label:"Mercado"},
   {key:"shop",     icon:Gem,          label:"Loja"},
   {key:"upgrades", icon:TrendingUp,   label:"Upgrades"},
@@ -49,7 +49,7 @@ function GameApp() {
         <div style={{flex:1,overflowY:"auto",paddingBottom:66}}>
           <AnimatePresence mode="wait">
             <m.div key={tab} initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-8}} transition={{duration:0.18}}>
-              {tab==="match"    && <MatchScreen    onToast={notify}/>}
+              {tab==="match"    && <MatchScreen    onToast={notify} onNavigateShop={()=>setTab("shop")}/>}
               {tab==="team"     && <TeamScreen     onToast={notify}/>}
               {tab==="market"   && <MarketScreen   onToast={notify}/>}
               {tab==="shop"     && <ShopScreen     onToast={notify}/>}

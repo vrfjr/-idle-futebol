@@ -39,6 +39,10 @@ export const spacing = {
   screenPadding: "16px 14px 8px",
 };
 
+export const shadows = {
+  glow: (color:string, size="16px") => `0 0 ${size} ${withAlpha(color,"strong")}`,
+};
+
 export const type = {
   eyebrow:     { fontSize:9,  fontWeight:700, letterSpacing:1.2 },
   heading:     { fontSize:17, fontWeight:900, letterSpacing:-0.3 },
