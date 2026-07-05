@@ -5,6 +5,7 @@ export interface SimAgent {
   x:number;y:number;bx:number;by:number;num:number;isHome:boolean;hasBall:boolean;
   action:AgentAction; actionTimer:number;
 }
+export interface PendingShot { isGoal:boolean; wasAttacking:boolean; }
 export interface Sim {
   home:SimAgent[]; away:SimAgent[];
   ball:{x:number;y:number;vx:number;vy:number};
@@ -14,6 +15,9 @@ export interface Sim {
   // Briefly blocks whoever just kicked the ball from immediately re-collecting it
   // while it's still traveling, so passes actually leave the passer's feet.
   passCooldownAgent:SimAgent|null; passCooldownTimer:number;
+  // A shot's outcome is rolled immediately, but not applied until the ball
+  // actually finishes traveling to the goal — see stepSimulation.
+  pendingShot:PendingShot|null; shotTimer:number;
 }
 
 export function createSim(W:number, H:number): Sim {
@@ -32,6 +36,7 @@ export function createSim(W:number, H:number): Sim {
     attacking:true, carrierIdx:-1,
     homeGoals:0, awayGoals:0, flash:0, frame:0,
     passCooldownAgent:null, passCooldownTimer:0,
+    pendingShot:null, shotTimer:0,
   };
 }
 
@@ -52,14 +57,15 @@ export function stepSimulation(sim:Sim, W:number, H:number, onGoal:(home:number,
     if(sim.frame%85===0 || d<W*0.19){
       c.action="kick"; c.actionTimer=14;
       if(d<W*0.21 && Math.random()<0.48){
-        if(Math.random()<0.55){
-          if(sim.attacking) sim.homeGoals++; else sim.awayGoals++;
-          sim.flash=75;
-          onGoal(sim.homeGoals, sim.awayGoals);
-        }
-        sim.attacking=!sim.attacking; sim.carrierIdx=-1;
-        home.forEach(p=>p.hasBall=false); away.forEach(p=>p.hasBall=false);
-        ball.vx=(Math.random()-.5)*6; ball.vy=(Math.random()-.5)*6;
+        // Roll the outcome now, but don't apply it until the ball actually
+        // arrives at goal — aim it at the goal mouth and let it fly there
+        // via the loose-ball physics below.
+        const gy = H/2 + (Math.random()-0.5)*H*0.15;
+        ball.vx=(goalX-ball.x)*0.25; ball.vy=(gy-ball.y)*0.25;
+        c.hasBall=false;
+        sim.carrierIdx=-1;
+        sim.pendingShot={isGoal:Math.random()<0.55, wasAttacking:sim.attacking};
+        sim.shotTimer=18;
       } else {
         const ti=1+Math.floor(Math.random()*(attk.length-1));
         const recv=attk[ti%attk.length];
@@ -94,12 +100,30 @@ export function stepSimulation(sim:Sim, W:number, H:number, onGoal:(home:number,
     if(ball.x<10||ball.x>W-10)ball.vx*=-0.8;
     if(ball.y<10||ball.y>H-10)ball.vy*=-0.8;
     ball.x=Math.max(10,Math.min(W-10,ball.x)); ball.y=Math.max(10,Math.min(H-10,ball.y));
-    for(const p of [...home,...away]){
-      if(p===sim.passCooldownAgent && sim.passCooldownTimer>0) continue;
-      if(Math.hypot(p.x-ball.x,p.y-ball.y)<15){
-        const ih=home.includes(p); sim.attacking=ih;
-        const team=ih?home:away; sim.carrierIdx=team.indexOf(p);
-        home.forEach(q=>q.hasBall=false); away.forEach(q=>q.hasBall=false); p.hasBall=true; break;
+
+    if(sim.pendingShot){
+      // Ball is mid-flight toward goal — no generic pickup while it travels,
+      // otherwise a random nearby player would "intercept" an already-decided shot.
+      if(--sim.shotTimer<=0){
+        const {isGoal, wasAttacking} = sim.pendingShot;
+        if(isGoal){
+          if(wasAttacking) sim.homeGoals++; else sim.awayGoals++;
+          sim.flash=75;
+          onGoal(sim.homeGoals, sim.awayGoals);
+        }
+        sim.attacking=!wasAttacking;
+        home.forEach(p=>p.hasBall=false); away.forEach(p=>p.hasBall=false);
+        ball.vx=(Math.random()-.5)*6; ball.vy=(Math.random()-.5)*6;
+        sim.pendingShot=null;
+      }
+    } else {
+      for(const p of [...home,...away]){
+        if(p===sim.passCooldownAgent && sim.passCooldownTimer>0) continue;
+        if(Math.hypot(p.x-ball.x,p.y-ball.y)<15){
+          const ih=home.includes(p); sim.attacking=ih;
+          const team=ih?home:away; sim.carrierIdx=team.indexOf(p);
+          home.forEach(q=>q.hasBall=false); away.forEach(q=>q.hasBall=false); p.hasBall=true; break;
+        }
       }
     }
   }

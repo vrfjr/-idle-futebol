@@ -4,7 +4,7 @@ import { createSim, stepSimulation, Sim } from "../game/matchSim";
 import { getPlayerTexture, getBallTexture, SPRITE_SCALE, RUN_FRAME_COUNT, FRAME_KICK, FRAME_TACKLE } from "../game/pixelSprites";
 import { colors, withAlpha } from "../styles/tokens";
 
-const W = 356, H = 218;
+const W = 480, H = 294;
 const LINE = "rgba(255,255,255,0.18)";
 const GOAL_LINE = "rgba(255,255,255,0.55)";
 
