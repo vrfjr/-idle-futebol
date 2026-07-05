@@ -9,10 +9,12 @@ export interface Player {
   name: string;
   pos: PositionKey;
   rarity: RarityKey;
-  atk: number;
+  pac: number;
+  sho: number;
+  pas: number;
   def: number;
-  spd: number;
-  dbl: number;
+  phy: number;
+  dri: number;
   ovr: number;
   price: number;
   sellPrice: number;

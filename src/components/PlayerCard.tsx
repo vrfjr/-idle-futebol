@@ -31,9 +31,10 @@ export function PlayerCard({player,compact=false,onAction,actionLabel,actionColo
           <span style={{fontSize:10,color:colors.textSecondary,fontWeight:600}}>OVR {player.ovr}</span>
         </div>
         {!compact&&(
-          <div style={{display:"flex",gap:4,marginTop:5}}>
-            {([["ATK",player.atk,colors.danger],["DEF",player.def,colors.primaryLight],
-               ["VEL",player.spd,colors.success],["DRI",player.dbl,colors.warning]] as [string,number,string][])
+          <div style={{display:"flex",gap:4,marginTop:5,flexWrap:"wrap",maxWidth:180}}>
+            {([["PAC",player.pac,colors.success],["SHO",player.sho,colors.danger],
+               ["PAS",player.pas,colors.primaryLight],["DEF",player.def,colors.rivalDark],
+               ["PHY",player.phy,colors.primary],["DRI",player.dri,colors.warning]] as [string,number,string][])
               .map(([l,v,c])=>(
               <span key={l} style={{fontSize:9,color:c,background:withAlpha(c,"subtle"),
                 padding:"2px 5px",borderRadius:radii.tag,fontWeight:700,letterSpacing:0.3}}>
