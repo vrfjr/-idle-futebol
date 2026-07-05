@@ -11,6 +11,9 @@ export interface Sim {
   attacking:boolean; carrierIdx:number;
   homeGoals:number; awayGoals:number;
   flash:number; frame:number;
+  // Briefly blocks whoever just kicked the ball from immediately re-collecting it
+  // while it's still traveling, so passes actually leave the passer's feet.
+  passCooldownAgent:SimAgent|null; passCooldownTimer:number;
 }
 
 export function createSim(W:number, H:number): Sim {
@@ -28,6 +31,7 @@ export function createSim(W:number, H:number): Sim {
     ball: {x:W/2, y:H/2, vx:2.5, vy:1.2},
     attacking:true, carrierIdx:-1,
     homeGoals:0, awayGoals:0, flash:0, frame:0,
+    passCooldownAgent:null, passCooldownTimer:0,
   };
 }
 
@@ -59,7 +63,15 @@ export function stepSimulation(sim:Sim, W:number, H:number, onGoal:(home:number,
       } else {
         const ti=1+Math.floor(Math.random()*(attk.length-1));
         const recv=attk[ti%attk.length];
-        if(recv){ball.vx=(recv.x-ball.x)*0.09; ball.vy=(recv.y-ball.y)*0.09; c.hasBall=false; recv.hasBall=true; sim.carrierIdx=attk.indexOf(recv);}
+        if(recv){
+          // Send the ball flying toward the receiver instead of snapping to them —
+          // it travels via the loose-ball physics below and gets picked up once
+          // someone (usually recv, but interceptable by a defender) is in range.
+          ball.vx=(recv.x-ball.x)*0.09; ball.vy=(recv.y-ball.y)*0.09;
+          c.hasBall=false;
+          sim.carrierIdx=-1;
+          sim.passCooldownAgent=c; sim.passCooldownTimer=10;
+        }
       }
     }
     let stolen = false;
@@ -83,6 +95,7 @@ export function stepSimulation(sim:Sim, W:number, H:number, onGoal:(home:number,
     if(ball.y<10||ball.y>H-10)ball.vy*=-0.8;
     ball.x=Math.max(10,Math.min(W-10,ball.x)); ball.y=Math.max(10,Math.min(H-10,ball.y));
     for(const p of [...home,...away]){
+      if(p===sim.passCooldownAgent && sim.passCooldownTimer>0) continue;
       if(Math.hypot(p.x-ball.x,p.y-ball.y)<15){
         const ih=home.includes(p); sim.attacking=ih;
         const team=ih?home:away; sim.carrierIdx=team.indexOf(p);
@@ -90,6 +103,7 @@ export function stepSimulation(sim:Sim, W:number, H:number, onGoal:(home:number,
       }
     }
   }
+  if(sim.passCooldownTimer>0 && --sim.passCooldownTimer===0) sim.passCooldownAgent=null;
 
   [...home,...away].forEach(p=>{
     if(!p.hasBall){p.x+=(p.bx-p.x)*0.025+(Math.random()-.5)*0.4; p.y+=(p.by-p.y)*0.025+(Math.random()-.5)*0.4;}
