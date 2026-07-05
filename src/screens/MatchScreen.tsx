@@ -13,14 +13,14 @@ interface Props { onToast:(msg:string,bad?:boolean)=>void; }
 
 export function MatchScreen({onToast}:Props) {
   const {state, dispatch} = useGame();
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const {liveScore, setLiveScore} = useGameLoop();
 
   const handleGoal = useCallback((home:number,away:number)=>{
     setLiveScore(prev=>({...prev,home,away}));
   },[setLiveScore]);
 
-  useMatchSimulation(canvasRef, handleGoal);
+  useMatchSimulation(containerRef, handleGoal);
 
   const pwr = calcPower(state.lineup, state.formation, state.upgrades);
   const pps = passivePerSec(state.passiveRate, state.upgrades.fans);
@@ -82,7 +82,7 @@ export function MatchScreen({onToast}:Props) {
       </div>
 
       <div style={{margin:"0 14px 10px",borderRadius:12,overflow:"hidden",border:`1px solid ${colors.border}`}}>
-        <canvas ref={canvasRef} width={356} height={218} style={{display:"block",width:"100%",height:"auto"}}/>
+        <div ref={containerRef} style={{width:"100%"}}/>
       </div>
 
       <div style={{display:"flex",gap:6,margin:"0 14px 10px"}}>
