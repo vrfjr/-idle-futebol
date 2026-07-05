@@ -123,6 +123,12 @@ export interface RoundResolution {
 }
 
 const RELEGATION_COUNT = 3;
+// Guaranteed bonus for reaching the end of a season at all — promoted,
+// relegated, or mid-table, doesn't matter. Separate from (and on top of) the
+// normal per-round win/draw/loss reward, and unlike the per-win diamond
+// chance, this diamond amount is small but always granted, not a roll.
+const SEASON_BONUS_COINS = 900;
+const SEASON_BONUS_DIAMONDS = 3;
 
 export function resolveRound(league:LeagueState, playerId:string, playerPower:number): RoundResolution {
   const round = league.fixtures[league.round];
@@ -166,6 +172,8 @@ export function resolveRound(league:LeagueState, playerId:string, playerPower:nu
     else if(playerPos>=standings.length-RELEGATION_COUNT) nextTier = Math.min(STARTING_LEAGUE_TIER, league.tier+1);
     const playerTeam = league.teams.find(t=>t.id===playerId)!;
     newLeague = startNewSeason(nextTier, playerTeam);
+    reward += SEASON_BONUS_COINS;
+    diamondReward += SEASON_BONUS_DIAMONDS;
   }
 
   return {league:newLeague, playerResult, reward, diamondReward};
