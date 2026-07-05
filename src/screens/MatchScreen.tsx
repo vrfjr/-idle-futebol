@@ -1,11 +1,11 @@
-import React, { useRef, useCallback, useState } from "react";
+import React, { useRef, useCallback, useMemo, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
 import { BarChart3, Waypoints, Shirt, Users } from "lucide-react";
 import { useGame } from "../store/GameContext";
 import { useMatchSimulation } from "../hooks/useMatchSimulation";
 import { useGameLoop } from "../hooks/useGameLoop";
 import { useDeltaFlash } from "../hooks/useDeltaFlash";
-import { calcPower, passivePerSec } from "../utils/balance";
+import { calcPowerBreakdown, passivePerSec } from "../utils/balance";
 import { ADD_REWARD } from "../store/actions";
 import { ResourceBar } from "../components/ResourceBar";
 import { StatShortcut } from "../components/StatShortcut";
@@ -13,6 +13,7 @@ import { LeagueBadge } from "../components/LeagueBadge";
 import { MatchScoreboard } from "../components/MatchScoreboard";
 import { RewardButton } from "../components/RewardButton";
 import { DeltaBadge } from "../components/DeltaBadge";
+import { PowerTooltip } from "../components/PowerTooltip";
 import { LeagueTableScreen } from "./LeagueTableScreen";
 import { colors } from "../styles/tokens";
 
@@ -28,12 +29,25 @@ export function MatchScreen({onToast, onNavigateShop, onNavigateTeam}:Props) {
     setLiveScore(prev=>({...prev,home,away}));
   },[setLiveScore]);
 
-  useMatchSimulation(containerRef, handleGoal, state.teamColor);
+  const visualLineup = useMemo(()=>state.lineup.slice(0, 11), [state.lineup]);
+  const playerTeamId = state.league.teams.find(t=>t.isPlayer)?.id;
+  const roundFixtures = state.league.fixtures[state.league.round] ?? [];
+  const playerFixture = roundFixtures.find(f=>f.home===playerTeamId || f.away===playerTeamId);
+  const opponentId = playerFixture ? (playerFixture.home===playerTeamId ? playerFixture.away : playerFixture.home) : undefined;
+  const opponentPower = state.league.teams.find(t=>t.id===opponentId)?.power ?? 45;
+  const simKey = useMemo(()=>[
+    state.formation,
+    state.teamColor,
+    opponentPower,
+    visualLineup.map(p=>`${p.id}:${p.pos}:${p.ovr}:${p.pac}:${p.sho}:${p.pas}:${p.def}:${p.phy}:${p.dri}`).join("|"),
+  ].join("::"), [state.formation, state.teamColor, opponentPower, visualLineup]);
 
-  const pwr = calcPower(state.lineup, state.formation, state.upgrades);
+  useMatchSimulation(containerRef, handleGoal, state.teamColor, state.formation, visualLineup, opponentPower, simKey);
+
+  const powerBreakdown = calcPowerBreakdown(state.lineup, state.formation, state.upgrades);
+  const pwr = powerBreakdown.total;
   const pwrFlash = useDeltaFlash(pwr, 1, d=>`+${Math.round(d)} PODER`);
   const pps = passivePerSec(state.passiveRate, state.upgrades.fans);
-  const playerTeamId = state.league.teams.find(t=>t.isPlayer)?.id;
   const playerRow = state.league.table.find(r=>r.teamId===playerTeamId);
 
   return (
@@ -43,17 +57,19 @@ export function MatchScreen({onToast, onNavigateShop, onNavigateTeam}:Props) {
           <LeagueBadge tier={state.league.tier} round={state.league.round}
             totalRounds={state.league.fixtures.length} onClick={()=>setShowTable(true)}/>
 
-          <div style={{textAlign:"center",position:"relative"}}>
-            <div style={{fontSize:9,color:colors.textMuted,fontWeight:700,letterSpacing:1.5}}>PODER</div>
-            <AnimatePresence mode="popLayout">
-              <m.div key={pwr} initial={{opacity:0,y:-6,scale:0.9}} animate={{opacity:1,y:0,scale:1}}
-                transition={{duration:0.25}}
-                style={{fontSize:30,fontWeight:900,color:colors.success,letterSpacing:-1,lineHeight:1}}>
-                {pwr}
-              </m.div>
-            </AnimatePresence>
-            {pwrFlash && <DeltaBadge keyId={pwrFlash.id} value={pwrFlash.text} color={colors.success}/>}
-          </div>
+          <PowerTooltip breakdown={powerBreakdown}>
+            <div style={{textAlign:"center",position:"relative"}}>
+              <div style={{fontSize:9,color:colors.textMuted,fontWeight:700,letterSpacing:1.5}}>PODER</div>
+              <AnimatePresence mode="popLayout">
+                <m.div key={pwr} initial={{opacity:0,y:-6,scale:0.9}} animate={{opacity:1,y:0,scale:1}}
+                  transition={{duration:0.25}}
+                  style={{fontSize:30,fontWeight:900,color:colors.success,letterSpacing:-1,lineHeight:1}}>
+                  {pwr}
+                </m.div>
+              </AnimatePresence>
+              {pwrFlash && <DeltaBadge keyId={pwrFlash.id} value={pwrFlash.text} color={colors.success}/>}
+            </div>
+          </PowerTooltip>
 
           <div style={{textAlign:"right"}}>
             <div style={{fontSize:9,color:colors.textMuted,fontWeight:700,letterSpacing:1.5,display:"flex",alignItems:"center",justifyContent:"flex-end",gap:4}}><BarChart3 size={10}/> V / E / D</div>

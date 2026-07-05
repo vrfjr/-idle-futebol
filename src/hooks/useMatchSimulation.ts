@@ -2,6 +2,7 @@ import { useEffect, RefObject } from "react";
 import { Application, Graphics, Sprite, Text, TextStyle } from "pixi.js";
 import { createSim, stepSimulation, Sim } from "../game/matchSim";
 import { getPlayerTexture, getBallTexture, SPRITE_SCALE, RUN_FRAME_COUNT, FRAME_KICK, FRAME_TACKLE } from "../game/pixelSprites";
+import { FormationKey, Player } from "../types";
 import { colors, withAlpha } from "../styles/tokens";
 
 const W = 480, H = 294;
@@ -32,7 +33,11 @@ function drawPitch(): Graphics {
 export function useMatchSimulation(
   containerRef: RefObject<HTMLDivElement>,
   onGoal: (home:number, away:number)=>void,
-  homeColor: string = colors.primary
+  homeColor: string = colors.primary,
+  formation: FormationKey = "4-3-3",
+  lineup: Player[] = [],
+  opponentPower = 45,
+  simKey = "",
 ): void {
   useEffect(()=>{
     const container = containerRef.current;
@@ -59,7 +64,7 @@ export function useMatchSimulation(
 
       app.stage.addChild(drawPitch());
 
-      const sim: Sim = createSim(W, H);
+      const sim: Sim = createSim(W, H, formation, lineup, opponentPower);
 
       const allAgentsForShadows = [...sim.home, ...sim.away];
       const groundShadows = allAgentsForShadows.map(()=>{
@@ -160,9 +165,5 @@ export function useMatchSimulation(
         app.destroy({removeView:true}, {children:true, texture:false, textureSource:false});
       }
     };
-  // containerRef.current, onGoal and homeColor are captured once at effect-setup
-  // time; this loop is intentionally not restarted on every re-render (a mid-match
-  // jersey-color change only takes effect next time the Match tab is remounted).
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [containerRef, onGoal, homeColor, formation, lineup, opponentPower, simKey]);
 }

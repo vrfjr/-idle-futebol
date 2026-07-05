@@ -1,4 +1,4 @@
-import { GameState, FormationKey } from "../types";
+import { GameState, FormationKey, Player } from "../types";
 import { GameAction, PASSIVE_INCOME, BUY_PLAYER, SELL_PLAYER, TOGGLE_SQUAD,
   UPGRADE, REFRESH_MARKET, BUY_PACK, ADD_REWARD, SET_FORMATION, RESOLVE_ROUND,
   SET_TEAM_IDENTITY, LOAD } from "./actions";
@@ -9,17 +9,32 @@ import { startNewSeason } from "../utils/league";
 export const PLAYER_TEAM_ID = "player";
 const DEFAULT_TEAM_NAME = "Meu Time";
 const DEFAULT_TEAM_COLOR = "#1d4ed8";
+const STARTER_ROSTER_SIZE = 14;
+const STARTER_LINEUP_SIZE = 11;
+
+function createStarterRoster(): Player[] {
+  return Array.from({length:STARTER_ROSTER_SIZE}, ()=>makePlayer("common"));
+}
+
+function ensureStarterRoster(state:GameState): GameState {
+  const roster = state.roster.slice();
+  while(roster.length<STARTER_ROSTER_SIZE) roster.push(makePlayer("common"));
+
+  const validIds = new Set(roster.map(p=>p.id));
+  const lineup = state.lineup.filter(p=>validIds.has(p.id)).slice(0, STARTER_LINEUP_SIZE);
+  roster.forEach(p=>{
+    if(lineup.length<STARTER_LINEUP_SIZE && !lineup.some(l=>l.id===p.id)) lineup.push(p);
+  });
+
+  return {...state, roster, lineup};
+}
 
 // FIX: factory function so makePlayer() runs lazily at app start, not at import time
 export function createInitialState(): GameState {
-  const roster = [
-    makePlayer("common"), makePlayer("common"), makePlayer("common"),
-    makePlayer("rare"),   makePlayer("common"), makePlayer("common"),
-    makePlayer("common"), makePlayer("rare"),
-  ];
+  const roster = createStarterRoster();
   return {
     coins: 6000, diamonds: 50,
-    roster, lineup: roster.slice(0,7),
+    roster, lineup: roster.slice(0,STARTER_LINEUP_SIZE),
     formation: "4-3-3",
     upgrades: {attack:0, defense:0, training:0, fans:0},
     teamName: DEFAULT_TEAM_NAME, teamColor: DEFAULT_TEAM_COLOR,
@@ -119,7 +134,7 @@ export function gameReducer(state:GameState, action:GameAction): GameState {
 
     case LOAD:
       // FIX: merge with initialState defaults so missing fields in saved data don't break the game
-      return {...state, ...action.payload};
+      return ensureStarterRoster({...state, ...action.payload});
 
     default:
       return state;

@@ -5,12 +5,21 @@ import { colors, radii, withAlpha } from "../styles/tokens";
 import { GameButton } from "./GameButton";
 
 interface Props {
-  player:Player; compact?:boolean;
+  player:Player; compact?:boolean; showStats?:boolean;
   onAction?:()=>void; actionLabel?:ReactNode; actionColor?:string;
 }
 
-export function PlayerCard({player,compact=false,onAction,actionLabel,actionColor=colors.success}:Props) {
+export function PlayerCard({player,compact=false,showStats=false,onAction,actionLabel,actionColor=colors.success}:Props) {
   const rc = RARITY[player.rarity];
+  const stats: [string,number,string][] = [
+    ["PAC",player.pac,colors.success],
+    ["SHO",player.sho,colors.danger],
+    ["PAS",player.pas,colors.primaryLight],
+    ["DEF",player.def,colors.rivalDark],
+    ["PHY",player.phy,colors.primary],
+    ["DRI",player.dri,colors.warning],
+  ];
+
   return (
     <div style={{background:colors.surface,border:`1px solid ${withAlpha(rc.c,"border")}`,borderLeft:`3px solid ${rc.c}`,
       borderRadius:radii.card,padding:compact?"9px 12px":"13px 14px",display:"flex",alignItems:"center",gap:10}}>
@@ -31,12 +40,9 @@ export function PlayerCard({player,compact=false,onAction,actionLabel,actionColo
           </span>
           <span style={{fontSize:10,color:colors.textSecondary,fontWeight:600}}>OVR {player.ovr}</span>
         </div>
-        {!compact&&(
-          <div style={{display:"flex",gap:4,marginTop:5,flexWrap:"wrap",maxWidth:180}}>
-            {([["PAC",player.pac,colors.success],["SHO",player.sho,colors.danger],
-               ["PAS",player.pas,colors.primaryLight],["DEF",player.def,colors.rivalDark],
-               ["PHY",player.phy,colors.primary],["DRI",player.dri,colors.warning]] as [string,number,string][])
-              .map(([l,v,c])=>(
+        {(!compact || showStats)&&(
+          <div style={{display:"flex",gap:4,marginTop:5,flexWrap:"wrap",maxWidth:compact?240:180}}>
+            {stats.map(([l,v,c])=>(
               <span key={l} style={{fontSize:9,color:c,background:withAlpha(c,"subtle"),
                 padding:"2px 5px",borderRadius:radii.tag,fontWeight:700,letterSpacing:0.3}}>
                 {l} {v}
