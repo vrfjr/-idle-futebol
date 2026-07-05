@@ -3,13 +3,15 @@ import { Texture } from "pixi.js";
 // 8-wide pixel grids. "." = transparent, "J" = jersey (recolored per team at build time).
 const OUTLINE = "#12181f";
 const SKIN = "#e8b48c";
+const HAIR = "#3a2417";
 const SHORTS = "#12181f";
 const SHOE = "#0d0d0d";
 
 const BODY = [
-  "..OOOO..",
+  "..HHHH..",
+  ".HSSSSH.",
   ".OSSSSO.",
-  ".OSSSSO.",
+  "..OJJO..",
   ".OJJJJO.",
   "OJJJJJJO",
   "OJJJJJJO",
@@ -52,7 +54,7 @@ const BALL_FRAME = [
 ];
 
 function basePalette(jerseyColor:string): Record<string,string> {
-  return { O:OUTLINE, S:SKIN, J:jerseyColor, B:SHORTS, K:SHOE, W:"#f5f5f5" };
+  return { O:OUTLINE, S:SKIN, H:HAIR, J:jerseyColor, B:SHORTS, K:SHOE, W:"#f5f5f5" };
 }
 
 function rasterize(grid:string[], palette:Record<string,string>): HTMLCanvasElement {

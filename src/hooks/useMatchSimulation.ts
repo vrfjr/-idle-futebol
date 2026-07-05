@@ -2,7 +2,7 @@ import { useEffect, RefObject } from "react";
 import { Application, Graphics, Sprite, Text, TextStyle } from "pixi.js";
 import { createSim, stepSimulation, Sim } from "../game/matchSim";
 import { getPlayerTexture, getBallTexture, SPRITE_SCALE, RUN_FRAME_COUNT } from "../game/pixelSprites";
-import { colors } from "../styles/tokens";
+import { colors, withAlpha } from "../styles/tokens";
 
 const W = 356, H = 218;
 const LINE = "rgba(255,255,255,0.18)";
@@ -60,6 +60,16 @@ export function useMatchSimulation(
 
       const sim: Sim = createSim(W, H);
 
+      const allAgentsForShadows = [...sim.home, ...sim.away];
+      const groundShadows = allAgentsForShadows.map(()=>{
+        const g = new Graphics().ellipse(0,0,7,3).fill("rgba(0,0,0,0.35)");
+        app.stage.addChild(g);
+        return g;
+      });
+
+      const ballGlow = new Graphics().circle(0,0,7).fill(withAlpha(colors.warning,"soft"));
+      app.stage.addChild(ballGlow);
+
       const makePlayerSprite = (jersey:string) => {
         const s = new Sprite(getPlayerTexture(jersey));
         s.anchor.set(0.5);
@@ -107,6 +117,7 @@ export function useMatchSimulation(
         sim.home.forEach((p,i)=>homeSprites[i].position.set(p.x,p.y));
         sim.away.forEach((p,i)=>awaySprites[i].position.set(p.x,p.y));
         allAgents.forEach((p,i)=>{
+          groundShadows[i].position.set(p.x, p.y+7);
           rings[i].position.set(p.x,p.y);
           rings[i].visible = p.hasBall;
 
@@ -119,6 +130,7 @@ export function useMatchSimulation(
           prevX[i] = p.x; prevY[i] = p.y;
         });
         ballSprite.position.set(sim.ball.x, sim.ball.y);
+        ballGlow.position.set(sim.ball.x, sim.ball.y);
 
         flashRect.visible = sim.flash > 0;
         flashRect.alpha = (sim.flash/75)*0.18;
