@@ -110,8 +110,11 @@ export function useMatchSimulation(
           rings[i].position.set(p.x,p.y);
           rings[i].visible = p.hasBall;
 
-          const moved = Math.hypot(p.x-prevX[i], p.y-prevY[i]) > 0.15;
-          const frame = moved ? 1 + (Math.floor(sim.frame/8)%(RUN_FRAME_COUNT-1)) : 0;
+          // Threshold set above the idle repositioning jitter (~0.2-0.3 typical) so only
+          // agents genuinely running (carrier/defenders closing in) show run frames.
+          const moved = Math.hypot(p.x-prevX[i], p.y-prevY[i]) > 0.6;
+          // Offset by agent index so the whole pitch doesn't step in lockstep.
+          const frame = moved ? 1 + (Math.floor((sim.frame+i*4)/8)%(RUN_FRAME_COUNT-1)) : 0;
           allSprites[i].texture = getPlayerTexture(allJersey[i], frame);
           prevX[i] = p.x; prevY[i] = p.y;
         });
