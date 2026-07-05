@@ -1,6 +1,9 @@
 # Roadmap Play Store e Android - Football Idle
 
-Ultima revisao: 2026-07-05
+Ultima revisao: 2026-07-05 (noite)
+
+Este arquivo agora vive DENTRO do repo (`pm/ROADMAP_PLAYSTORE.md`) e e versionado no git.
+Repo do projeto: https://github.com/vrfjr/-idle-futebol (branch `master`).
 
 Este arquivo e o checklist obrigatorio para publicar e manter o jogo no Android/Google Play sem perder progresso do jogador, sem quebrar anuncios recompensados e sem reprovar por requisitos tecnicos.
 
@@ -40,6 +43,10 @@ Observacao: requisitos da Play Store mudam. Antes de gerar release final, confer
 - [!] Ainda falta testar instalacao via Play Console/teste interno.
 - [!] Ainda falta testar 16 KB page size em ambiente real/Play.
 - [!] Ainda falta formulario Play Console: Data Safety, anuncios, classificacao etaria e publico-alvo.
+- [x] Codigo publicado no GitHub em 2026-07-05 (`vrfjr/-idle-futebol`), incluindo pasta `android/` (antes estava fora do git); keystore e senhas conferidos como NAO versionados.
+- [~] Conta de desenvolvedor Google Play criada; aguardando Google validar identidade (nada fica travado enquanto isso — codigo, nome, icone e ficha da loja podem mudar a vontade; so `applicationId` e keystore ficam imutaveis apos o primeiro upload).
+- [x] Limpeza de arquivos residuais em 2026-07-05: removidos `claude-skills/` (raiz e pm), `claude-skills.zip`, `projeto_melhorado.zip`, `CLAUDE_CODE_PLAYSTORE.txt` e as copias soltas de roadmap/politica na raiz (versoes canonicas: `pm/ROADMAP_PLAYSTORE.md` e `pm/PRIVACY_POLICY_DRAFT.md`).
+- [ ] Pendente de acao externa: `gh auth login` para tornar o repo privado e publicar a politica de privacidade via GitHub Pages; upload do AAB no Play Console apos validacao de identidade.
 
 ## Execucao registrada em 2026-07-05
 
