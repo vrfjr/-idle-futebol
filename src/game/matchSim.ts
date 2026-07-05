@@ -50,12 +50,42 @@ export interface PendingShot {
   wasAttacking: boolean;
   xg?: number;
   wasSaved?: boolean;
+  /** Charged down by an outfield defender before it could reach goal — the
+   *  blocking defender is the last touch, so this resolves as a corner
+   *  rather than a goal kick, even though the shooting team was attacking. */
+  wasBlocked?: boolean;
 }
 
 export interface PendingPass {
   passer: SimAgent;
   target: SimAgent;
   framesLeft: number;
+}
+
+// Restarts are one nullable state instead of a pile of isThrowIn/isCorner/
+// isGoalKick/isKickoff booleans — `restart===null` means normal open play.
+export type RestartKind = "THROW_IN" | "CORNER" | "GOAL_KICK" | "KICKOFF";
+
+export interface RestartState {
+  kind: RestartKind;
+  /** isHome of the team taking the restart. */
+  team: boolean;
+  x: number;
+  y: number;
+  taker: SimAgent | null;
+  /** Frames left in the paused setup before the restart is actually taken. */
+  timer: number;
+}
+
+export type MatchEventType =
+  | "THROW_IN" | "CORNER" | "GOAL_KICK" | "KICKOFF" | "GOAL" | "TACKLE";
+
+export interface MatchEvent {
+  type: MatchEventType;
+  frame: number;
+  team: boolean;
+  x?: number;
+  y?: number;
 }
 
 export interface Sim {
@@ -75,6 +105,9 @@ export interface Sim {
   shotTimer: number;
   pendingPass: PendingPass | null;
   lastTouchHome: boolean | null;
+  lastTouchAgent: SimAgent | null;
+  restart: RestartState | null;
+  lastEvent: MatchEvent | null;
   homeTactics: TeamTactics;
   awayTactics: TeamTactics;
   rngState: number;
@@ -261,6 +294,7 @@ function setCarrier(
   player.hasBall = true;
   player.decisionTimer = Math.max(player.decisionTimer, 5);
   sim.lastTouchHome = player.isHome;
+  sim.lastTouchAgent = player;
   sim.pendingPass = null;
   sim.ball.vx = 0;
   sim.ball.vy = 0;
@@ -346,6 +380,17 @@ function passLaneRisk(
   });
 
   return clamp(risk, 0, 1);
+}
+
+// Whether a y-coordinate falls between the goalposts — used to tell a real
+// goal-line crossing apart from the ball merely going out for a corner/goal
+// kick. Goals are only ever decided by the deliberate executeShot()/
+// resolvePendingShot() pipeline, never by ball physics crossing x<0/x>W on
+// its own, so this exists for correctness/clarity at that boundary check
+// rather than to award a goal itself.
+function isInsideGoalMouth(y: number, H: number): boolean {
+  const halfGoal = H * 0.085;
+  return y > H / 2 - halfGoal && y < H / 2 + halfGoal;
 }
 
 function angleBetweenGoalPosts(
@@ -445,7 +490,9 @@ function forwardAdvancement(p: SimAgent): number {
 
 function attackTarget(
   p: SimAgent,
-  carrier: SimAgent,
+  // Only x/y are read — during a restart there's no real ball carrier yet,
+  // so callers can pass the restart spot itself as this reference point.
+  carrier: { x: number; y: number },
   opponents: SimAgent[],
   team: SimAgent[],
   tactics: TeamTactics,
@@ -754,6 +801,7 @@ function executePass(
   sim.ball.vx = (pdx / pd) * passSpeed;
   sim.ball.vy = (pdy / pd) * passSpeed;
   sim.lastTouchHome = carrier.isHome;
+  sim.lastTouchAgent = carrier;
   sim.pendingPass = {
     passer: carrier,
     target,
@@ -769,6 +817,27 @@ function executePass(
   sim.passCooldownTimer = 7;
 }
 
+// An outfield defender standing in the shot's lane can charge it down before
+// it ever reaches the keeper — without this, every non-goal shot resolves as
+// either a save or a clean miss, and a block (the defender's touch, not the
+// shooter's) never happens, so a corner from a blocked shot can never occur.
+function findShotBlocker(shooter: SimAgent, opponents: SimAgent[], W: number, H: number): SimAgent | null {
+  const gx = goalXFor(shooter.isHome, W);
+  let best: SimAgent | null = null;
+  let bestRisk = 0;
+
+  opponents.forEach((p) => {
+    if (p.pos === "GOL") return;
+    const d = pointSegmentDistance(p.x, p.y, shooter.x, shooter.y, gx, H / 2);
+    const corridor = 24;
+    if (d >= corridor) return;
+    const risk = 1 - d / corridor;
+    if (risk > bestRisk) { bestRisk = risk; best = p; }
+  });
+
+  return bestRisk > 0.12 ? best : null;
+}
+
 function executeShot(
   sim: Sim,
   shooter: SimAgent,
@@ -780,6 +849,32 @@ function executeShot(
   if (!keeper) return;
 
   const xg = calculateShotChance(shooter, keeper, opponents, W, H);
+
+  const blocker = findShotBlocker(shooter, opponents, W, H);
+  const blockChance = blocker ? clamp(0.12 + blocker.def * 0.005, 0.08, 0.42) : 0;
+  if (blocker && rand(sim) < blockChance) {
+    sim.lastTouchHome = blocker.isHome;
+    sim.lastTouchAgent = blocker;
+    const deflectY = clamp(blocker.y + centeredRand(sim) * H * 0.10, H * 0.08, H * 0.92);
+    const dx = goalXFor(shooter.isHome, W) - sim.ball.x;
+    const dy = deflectY - sim.ball.y;
+    const d = Math.max(1, Math.hypot(dx, dy));
+    const speed = clamp(4 + blocker.phy * 0.02, 4, 7);
+
+    sim.ball.vx = (dx / d) * speed;
+    sim.ball.vy = (dy / d) * speed;
+    sim.pendingShot = { isGoal: false, wasAttacking: shooter.isHome, xg, wasBlocked: true };
+    sim.shotTimer = Math.round(clamp(d / speed * 0.9, 5, 16));
+    sim.pendingPass = null;
+
+    shooter.hasBall = false;
+    shooter.action = "kick";
+    shooter.actionTimer = 14;
+    shooter.decisionTimer = 12;
+    sim.carrierIdx = -1;
+    return;
+  }
+
   const isGoal = rand(sim) < xg;
   const keeperRating = (keeper.def * 0.66 + keeper.phy * 0.17 + keeper.ovr * 0.17) / 100;
   const wasSaved = !isGoal && rand(sim) < clamp(0.28 + keeperRating * 0.50, 0.30, 0.82);
@@ -805,6 +900,7 @@ function executeShot(
   sim.ball.vx = (dx / d) * shotSpeed;
   sim.ball.vy = (dy / d) * shotSpeed;
   sim.lastTouchHome = shooter.isHome;
+  sim.lastTouchAgent = shooter;
   sim.pendingShot = {
     isGoal,
     wasAttacking: shooter.isHome,
@@ -1002,6 +1098,68 @@ function restartPossession(
   setCarrier(sim, nearest.p);
 }
 
+const RESTART_PAUSE: Record<RestartKind, number> = {
+  THROW_IN: 22,
+  CORNER: 42,
+  GOAL_KICK: 36,
+  KICKOFF: 20,
+};
+
+function logEvent(sim: Sim, type: MatchEventType, team: boolean, x?: number, y?: number): void {
+  sim.lastEvent = { type, frame: sim.frame, team, x, y };
+}
+
+// Picks who takes each restart type — never a goalkeeper for throw-ins/
+// corners, never an outfielder for a goal kick, and never just "whoever's
+// closest" for a corner (that would routinely hand it to a center-back).
+function pickRestartTaker(sim: Sim, kind: RestartKind, team: boolean, x: number, y: number, H: number): SimAgent | null {
+  const squad = teamOf(sim, team);
+
+  if (kind === "GOAL_KICK") {
+    return squad.find((p) => p.pos === "GOL") ?? nearestPlayer(squad, x, y)?.p ?? null;
+  }
+
+  if (kind === "THROW_IN") {
+    // LD sits on the high-y flank, LE on the low-y flank (see ROLE_LANE) —
+    // take it from whichever fullback actually plays that side, falling back
+    // to the nearest outfielder if they're too far from the throw-in spot.
+    const preferredPos: PositionKey = y > H / 2 ? "LD" : "LE";
+    const preferred = squad.find((p) => p.pos === preferredPos);
+    if (preferred && Math.hypot(preferred.x - x, preferred.y - y) < 60) return preferred;
+    return nearestPlayer(squad.filter((p) => p.pos !== "GOL"), x, y)?.p ?? null;
+  }
+
+  if (kind === "CORNER") {
+    const candidates = squad.filter((p) => p.pos === "PD" || p.pos === "PE" || p.pos === "MEI" || p.pos === "MC");
+    const best = candidates.reduce<SimAgent | null>((acc, p) => (!acc || p.pas > acc.pas ? p : acc), null);
+    return best ?? nearestPlayer(squad.filter((p) => p.pos !== "GOL"), x, y)?.p ?? null;
+  }
+
+  // KICKOFF
+  const outfield = squad.filter((p) => p.pos !== "GOL");
+  return nearestPlayer(outfield.length ? outfield : squad, x, y)?.p ?? null;
+}
+
+function beginRestart(sim: Sim, kind: RestartKind, team: boolean, x: number, y: number, W: number, H: number): void {
+  sim.pendingPass = null;
+  sim.pendingShot = null;
+  sim.shotTimer = 0;
+  sim.carrierIdx = -1;
+  sim.attacking = team;
+  [...sim.home, ...sim.away].forEach((p) => { p.hasBall = false; });
+
+  const taker = pickRestartTaker(sim, kind, team, x, y, H);
+  if (taker) {
+    taker.x = clamp(x, 6, W - 6);
+    taker.y = clamp(y, 6, H - 6);
+    taker.vx = 0;
+    taker.vy = 0;
+  }
+
+  sim.restart = { kind, team, x, y, taker, timer: RESTART_PAUSE[kind] };
+  logEvent(sim, kind, team, x, y);
+}
+
 function handleBallOut(sim: Sim, W: number, H: number): boolean {
   const outY = sim.ball.y < 0 || sim.ball.y > H;
   const outX = sim.ball.x < 0 || sim.ball.x > W;
@@ -1009,27 +1167,144 @@ function handleBallOut(sim: Sim, W: number, H: number): boolean {
 
   if (outY) {
     const possessionHome = sim.lastTouchHome === null ? !sim.attacking : !sim.lastTouchHome;
-    restartPossession(
-      sim,
-      possessionHome,
+    beginRestart(
+      sim, "THROW_IN", possessionHome,
       clamp(sim.ball.x, 8, W - 8),
       clamp(sim.ball.y, 8, H - 8),
+      W, H,
     );
     return true;
   }
 
-  // Simplified corner/goal-kick rule.
+  // A ball crossing the goal line inside the goal mouth is only ever a real
+  // goal via the deliberate executeShot()/resolvePendingShot() flow — physics
+  // alone reaching x<0/x>W here (open play, no pending shot) never scores,
+  // so it always resolves as a corner or goal kick regardless of y.
+  void isInsideGoalMouth;
+
   const defendingHome = sim.ball.x < 0;
   const lastTouchByDefender = sim.lastTouchHome === defendingHome;
-  const possessionHome = lastTouchByDefender ? !defendingHome : defendingHome;
+  const isCorner = lastTouchByDefender;
+  const restartingTeam = isCorner ? !defendingHome : defendingHome;
 
-  restartPossession(
-    sim,
-    possessionHome,
-    defendingHome ? W * 0.08 : W * 0.92,
-    clamp(sim.ball.y, H * 0.12, H * 0.88),
-  );
+  if (isCorner) {
+    const cornerY = sim.ball.y > H / 2 ? H * 0.94 : H * 0.06;
+    beginRestart(sim, "CORNER", restartingTeam, defendingHome ? W * 0.03 : W * 0.97, cornerY, W, H);
+  } else {
+    beginRestart(sim, "GOAL_KICK", restartingTeam, defendingHome ? W * 0.10 : W * 0.90, H / 2, W, H);
+  }
   return true;
+}
+
+// Off-ball shape during a paused restart — reuses the same attackTarget()/
+// defensiveTarget() the rest of the sim already uses (with the restart spot
+// standing in for "where the ball is"), since there's no real ball carrier
+// to react to yet. Corners get an extra push: strikers crash the box, one
+// holding player stays back for balance instead of everyone crashing forward.
+function updateRestartShape(sim: Sim, W: number, H: number): void {
+  const r = sim.restart;
+  if (!r) return;
+
+  const reference = { x: r.x, y: r.y };
+  const cornerBoxX = r.x < W / 2 ? W * 0.12 : W * 0.88;
+
+  [true, false].forEach((isHome) => {
+    const team = teamOf(sim, isHome);
+    const opponents = opponentsOf(sim, isHome);
+    const tactics = tacticsOf(sim, isHome);
+    const isRestarting = isHome === r.team;
+
+    team.forEach((p) => {
+      if (p === r.taker) return;
+
+      let target = isRestarting
+        ? attackTarget(p, reference, opponents, team, tactics, W, H)
+        : defensiveTarget(p, r.x, r.y, opponents, team, tactics, false, W, H);
+
+      if (r.kind === "CORNER" && isRestarting) {
+        if (p.pos === "CA" || p.pos === "SA") {
+          target = { x: lerp(target.x, cornerBoxX, 0.7), y: target.y };
+        } else if (p.pos === "VOL" || p.pos === "MC") {
+          // One holding player stays central near halfway for balance instead
+          // of everyone crashing the box.
+          target = { x: lerp(target.x, W / 2, 0.5), y: H / 2 };
+        }
+      }
+
+      const roleSpeed = p.pos === "GOL" ? 0.45 : 0.58 + p.pac / 185;
+      moveAgentToward(p, target.x, target.y, roleSpeed, 0.20);
+    });
+  });
+}
+
+function resolveCornerCross(sim: Sim, taker: SimAgent, W: number, H: number): void {
+  const attackers = teamOf(sim, taker.isHome).filter((p) => p !== taker && p.pos !== "GOL");
+  const defenders = opponentsOf(sim, taker.isHome);
+  const gx = goalXFor(taker.isHome, W);
+
+  const bestAttacker = attackers.reduce<{ p: SimAgent; d: number } | null>((best, p) => {
+    const d = Math.hypot(gx - p.x, H / 2 - p.y);
+    return !best || d < best.d ? { p, d } : best;
+  }, null);
+
+  if (!bestAttacker) {
+    setCarrier(sim, taker);
+    return;
+  }
+
+  const attacker = bestAttacker.p;
+  const nearestDefender = nearestPlayer(defenders.filter((d) => d.pos !== "GOL"), attacker.x, attacker.y)?.p;
+
+  const aerialAttack = attacker.phy * 0.45 + attacker.sho * 0.25 + attacker.ovr * 0.20 + (attacker.pac + attacker.dri) / 2 * 0.10;
+  const aerialDefense = nearestDefender
+    ? nearestDefender.def * 0.50 + nearestDefender.phy * 0.35 + nearestDefender.ovr * 0.15
+    : 30;
+  const winChance = clamp(0.5 + (aerialAttack - aerialDefense) * 0.01, 0.15, 0.85);
+
+  sim.ball.x = attacker.x;
+  sim.ball.y = attacker.y;
+  sim.lastTouchHome = attacker.isHome;
+  sim.lastTouchAgent = attacker;
+
+  if (rand(sim) < winChance) {
+    executeShot(sim, attacker, W, H);
+    return;
+  }
+
+  const keeper = defenders.find((d) => d.pos === "GOL");
+  const winner = keeper && rand(sim) < 0.4 ? keeper : nearestDefender ?? defenders[0];
+  if (winner) setCarrier(sim, winner);
+  else restartPossession(sim, !taker.isHome, sim.ball.x, sim.ball.y);
+}
+
+function executeRestart(sim: Sim, W: number, H: number): void {
+  const r = sim.restart;
+  if (!r) return;
+  sim.restart = null;
+
+  const taker = r.taker;
+  if (!taker) {
+    restartPossession(sim, r.team, r.x, r.y);
+    return;
+  }
+
+  if (r.kind === "CORNER") {
+    resolveCornerCross(sim, taker, W, H);
+    return;
+  }
+
+  if (r.kind === "KICKOFF") {
+    setCarrier(sim, taker);
+    return;
+  }
+
+  // THROW_IN / GOAL_KICK both just look for the best available pass — the
+  // existing utility scorer already prefers short/safe options for a
+  // low-risk/low-directness team and long/vertical ones for a direct team,
+  // so no separate short-vs-long special case is needed here.
+  const pass = bestPassChoice(sim, taker, W, H);
+  if (pass) executePass(sim, taker, pass, W);
+  else setCarrier(sim, taker);
 }
 
 function chaseLooseBall(sim: Sim, isHome: boolean, W: number, _H: number): void {
@@ -1107,6 +1382,10 @@ function tryControlLooseBall(sim: Sim, W: number): void {
   void W;
 }
 
+// Snaps everyone back to their formation anchor (the correct kickoff shape —
+// this transition itself is instant, real football doesn't animate it either)
+// then hands off to the same paused RestartState the other dead-ball
+// restarts use, instead of immediately granting possession.
 function resetKickoff(sim: Sim, kickoffHome: boolean, W: number, H: number): void {
   [...sim.home, ...sim.away].forEach((p) => {
     p.x = p.bx;
@@ -1118,23 +1397,12 @@ function resetKickoff(sim: Sim, kickoffHome: boolean, W: number, H: number): voi
     p.controlCooldown = 0;
   });
 
-  sim.attacking = kickoffHome;
-  sim.carrierIdx = -1;
-  sim.pendingPass = null;
-  sim.pendingShot = null;
   sim.ball.x = W / 2;
   sim.ball.y = H / 2;
   sim.ball.vx = 0;
   sim.ball.vy = 0;
 
-  const team = teamOf(sim, kickoffHome);
-  const outfield = team.filter((p) => p.pos !== "GOL");
-  const kickoff = nearestPlayer(outfield.length ? outfield : team, W / 2, H / 2);
-  if (!kickoff) return;
-
-  kickoff.p.x = W / 2 - attackDir(kickoffHome) * 3;
-  kickoff.p.y = H / 2;
-  setCarrier(sim, kickoff.p);
+  beginRestart(sim, "KICKOFF", kickoffHome, W / 2, H / 2, W, H);
 }
 
 function resolvePendingShot(
@@ -1151,6 +1419,7 @@ function resolvePendingShot(
     else sim.awayGoals += 1;
 
     sim.flash = 75;
+    logEvent(sim, "GOAL", shot.wasAttacking, sim.ball.x, sim.ball.y);
     onGoal(sim.homeGoals, sim.awayGoals);
     const kickoffHome = !shot.wasAttacking;
     resetKickoff(sim, kickoffHome, W, H);
@@ -1158,16 +1427,30 @@ function resolvePendingShot(
   }
 
   const defendingHome = !shot.wasAttacking;
-  const defenders = teamOf(sim, defendingHome);
-  const keeper = defenders.find((p) => p.pos === "GOL") ?? defenders[0];
+  const attackingHome = shot.wasAttacking;
   sim.pendingShot = null;
   sim.shotTimer = 0;
 
-  if (keeper) {
-    setCarrier(sim, keeper);
-  } else {
-    restartPossession(sim, defendingHome, sim.ball.x, sim.ball.y);
+  if (shot.wasBlocked) {
+    // The defender's touch (not the shooter's) sent it behind — corner for
+    // the attacking team, exactly like a real charged-down shot.
+    const cornerY = sim.ball.y > H / 2 ? H * 0.94 : H * 0.06;
+    beginRestart(sim, "CORNER", attackingHome, attackingHome ? W * 0.97 : W * 0.03, cornerY, W, H);
+    return;
   }
+
+  if (shot.wasSaved) {
+    // Keeper holds/parries it — real possession, no dead-ball restart needed.
+    const defenders = teamOf(sim, defendingHome);
+    const keeper = defenders.find((p) => p.pos === "GOL") ?? defenders[0];
+    if (keeper) setCarrier(sim, keeper);
+    else restartPossession(sim, defendingHome, sim.ball.x, sim.ball.y);
+    return;
+  }
+
+  // A clean miss actually went out for a real goal kick, instead of just
+  // teleporting the ball into the keeper's hands regardless of how wide it went.
+  beginRestart(sim, "GOAL_KICK", defendingHome, defendingHome ? W * 0.10 : W * 0.90, H / 2, W, H);
 }
 
 function separateAgents(players: SimAgent[], W: number, H: number): void {
@@ -1275,6 +1558,9 @@ export function createSim(
     shotTimer: 0,
     pendingPass: null,
     lastTouchHome: null,
+    lastTouchAgent: null,
+    restart: null,
+    lastEvent: null,
     homeTactics: normalizeTactics(options.homeTactics),
     awayTactics: normalizeTactics(options.awayTactics),
     rngState,
@@ -1293,37 +1579,50 @@ export function stepSimulation(
   sim.frame += 1;
   tickAgentTimers(sim);
 
-  // Formation and tactics continuously define the team's dynamic shape.
-  updateTeamShape(sim, true, W, H);
-  updateTeamShape(sim, false, W, H);
-
-  if (sim.pendingShot) {
-    updateBallPhysics(sim);
-    sim.shotTimer -= 1;
-    if (sim.shotTimer <= 0) resolvePendingShot(sim, W, H, onGoal);
+  if (sim.restart) {
+    // Paused for a throw-in/corner/goal-kick/kickoff: no tackles, no loose-ball
+    // chasing, no shoot/pass/dribble decisions — just reposition toward the
+    // restart shape and count down to the actual take.
+    updateRestartShape(sim, W, H);
+    sim.ball.x = sim.restart.x;
+    sim.ball.y = sim.restart.y;
+    sim.ball.vx = 0;
+    sim.ball.vy = 0;
+    sim.restart.timer -= 1;
+    if (sim.restart.timer <= 0) executeRestart(sim, W, H);
   } else {
-    const carrier = currentCarrier(sim);
+    // Formation and tactics continuously define the team's dynamic shape.
+    updateTeamShape(sim, true, W, H);
+    updateTeamShape(sim, false, W, H);
 
-    if (carrier) {
-      carrier.hasBall = true;
-      moveCarrier(sim, carrier, W, H);
-      attemptTackles(sim, carrier, W);
-
-      // The tackle may have changed possession.
-      const afterTackleCarrier = currentCarrier(sim);
-      if (afterTackleCarrier === carrier && carrier.decisionTimer <= 0) {
-        decideCarrierAction(sim, carrier, W, H);
-        if (currentCarrier(sim) === carrier) {
-          carrier.decisionTimer = decisionInterval(carrier, tacticsOf(sim, carrier.isHome));
-        }
-      }
-    } else {
+    if (sim.pendingShot) {
       updateBallPhysics(sim);
+      sim.shotTimer -= 1;
+      if (sim.shotTimer <= 0) resolvePendingShot(sim, W, H, onGoal);
+    } else {
+      const carrier = currentCarrier(sim);
 
-      if (!handleBallOut(sim, W, H)) {
-        chaseLooseBall(sim, true, W, H);
-        chaseLooseBall(sim, false, W, H);
-        tryControlLooseBall(sim, W);
+      if (carrier) {
+        carrier.hasBall = true;
+        moveCarrier(sim, carrier, W, H);
+        attemptTackles(sim, carrier, W);
+
+        // The tackle may have changed possession.
+        const afterTackleCarrier = currentCarrier(sim);
+        if (afterTackleCarrier === carrier && carrier.decisionTimer <= 0) {
+          decideCarrierAction(sim, carrier, W, H);
+          if (currentCarrier(sim) === carrier) {
+            carrier.decisionTimer = decisionInterval(carrier, tacticsOf(sim, carrier.isHome));
+          }
+        }
+      } else {
+        updateBallPhysics(sim);
+
+        if (!handleBallOut(sim, W, H)) {
+          chaseLooseBall(sim, true, W, H);
+          chaseLooseBall(sim, false, W, H);
+          tryControlLooseBall(sim, W);
+        }
       }
     }
   }
