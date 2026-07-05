@@ -1,13 +1,17 @@
 @import url("https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&display=swap");
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-body{background:#070d1a;font-family:"Rajdhani",sans-serif;color:#e2e8f0;-webkit-font-smoothing:antialiased;}
+html{background:#03050d;}
+body{min-height:100vh;background:
+  linear-gradient(180deg,#101536 0%,#071026 34%,#05131d 68%,#03050d 100%);
+  font-family:"Rajdhani",sans-serif;color:#f2f7ff;-webkit-font-smoothing:antialiased;}
 button{font-family:"Rajdhani",sans-serif;}
 ::-webkit-scrollbar{width:2px;}
 ::-webkit-scrollbar-track{background:transparent;}
-::-webkit-scrollbar-thumb{background:#131e33;border-radius:2px;}
+::-webkit-scrollbar-thumb{background:#53618b;border-radius:2px;}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
 button{-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
 .reward-shine{position:absolute;top:0;left:-60%;width:35%;height:100%;pointer-events:none;
   background:linear-gradient(115deg, transparent, rgba(255,255,255,0.4), transparent);
   transform:skewX(-18deg);animation:reward-shine 3.6s ease-in-out infinite;}
 @keyframes reward-shine{0%{left:-60%;}35%{left:130%;}100%{left:130%;}}
+@keyframes shimmer-line{0%{transform:translateX(-120%)}100%{transform:translateX(140%)}}

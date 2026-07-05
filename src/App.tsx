@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { LazyMotion, m, AnimatePresence } from "framer-motion";
-import { CircleDot, Shirt, ShoppingCart, Gem, TrendingUp, LucideIcon } from "lucide-react";
+import { CircleDot, Shirt, ShoppingCart, Gem, TrendingUp, LucideIcon, Trophy, Zap } from "lucide-react";
 import { GameProvider, useGame } from "./store/GameContext";
 import { usePassiveIncome } from "./hooks/usePassiveIncome";
-import { upgCost } from "./utils/balance";
+import { calcPower, upgCost } from "./utils/balance";
 import { MatchScreen } from "./screens/MatchScreen";
 import { TeamScreen } from "./screens/TeamScreen";
 import { MarketScreen } from "./screens/MarketScreen";
@@ -11,7 +11,7 @@ import { ShopScreen } from "./screens/ShopScreen";
 import { UpgradesScreen } from "./screens/UpgradesScreen";
 import { Toast } from "./components/Toast";
 import { BottomNavItem } from "./components/BottomNavItem";
-import { colors } from "./styles/tokens";
+import { colors, shadows, withAlpha } from "./styles/tokens";
 import "./index.css";
 
 const loadFeatures = () => import("framer-motion").then(mod => mod.domAnimation);
@@ -26,13 +26,11 @@ const NAV:{key:Tab;icon:LucideIcon;label:string}[] = [
   {key:"upgrades", icon:TrendingUp,   label:"Upgrades"},
 ];
 
-// Inner component that can use context hooks
 function GameApp() {
   const { state } = useGame();
   const [tab, setTab] = useState<Tab>("match");
   const [toast, setToast] = useState<{msg:string;bad:boolean}|null>(null);
 
-  // FIX: usePassiveIncome now uses context internally — no manual wiring needed
   usePassiveIncome();
 
   const notify = (msg:string, bad=false)=>{
@@ -40,19 +38,55 @@ function GameApp() {
     setTimeout(()=>setToast(null), 2600);
   };
 
-  // Real, state-derived nudge — only lit when at least one upgrade is actually affordable.
   const upgradeAvailable = Object.values(state.upgrades).some(lvl=>state.coins>=upgCost(lvl));
+  const power = calcPower(state.lineup, state.formation, state.upgrades);
 
   return (
     <LazyMotion features={loadFeatures} strict>
-      <div style={{background:colors.bg,minHeight:"100vh",maxWidth:430,margin:"0 auto",
-        fontFamily:"'Rajdhani',sans-serif",color:colors.textHeading,position:"relative",display:"flex",flexDirection:"column"}}>
+      <div style={{minHeight:"100vh",maxWidth:430,margin:"0 auto",
+        fontFamily:"'Rajdhani',sans-serif",color:colors.textHeading,position:"relative",display:"flex",flexDirection:"column",
+        overflow:"hidden",background:`linear-gradient(180deg, ${colors.bg} 0%, ${colors.bgDeep} 100%)`}}>
+        <div style={{position:"absolute",inset:0,pointerEvents:"none",
+          background:"linear-gradient(120deg, rgba(124,199,255,0.12), transparent 28%, rgba(139,255,74,0.08) 70%, transparent)",
+          opacity:0.9}}/>
+        <div style={{position:"absolute",left:-80,right:-80,top:64,height:88,pointerEvents:"none",
+          background:"repeating-linear-gradient(100deg, transparent 0, transparent 14px, rgba(255,255,255,0.04) 15px, transparent 17px)",
+          transform:"skewY(-6deg)",opacity:0.7}}/>
 
         <AnimatePresence>
           {toast && <Toast key="toast" msg={toast.msg} bad={toast.bad}/>}
         </AnimatePresence>
 
-        <div style={{flex:1,overflowY:"auto",paddingBottom:"calc(64px + env(safe-area-inset-bottom))"}}>
+        <header style={{position:"relative",zIndex:2,padding:"12px 14px 10px",
+          background:`linear-gradient(180deg, ${withAlpha(colors.surfaceAlt,"medium")}, ${withAlpha(colors.panel,"soft")})`,
+          borderBottom:`1px solid ${withAlpha(colors.cyan,"soft")}`,boxShadow:shadows.panel}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
+            <div style={{minWidth:0}}>
+              <div style={{fontSize:9,color:colors.cyan,fontWeight:900,letterSpacing:1.3,textTransform:"uppercase"}}>Football Idle Manager</div>
+              <div style={{fontSize:18,color:colors.textHeading,fontWeight:900,letterSpacing:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
+                {state.teamName}
+              </div>
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
+              <div style={{border:`1px solid ${withAlpha(colors.warning,"medium")}`,background:withAlpha(colors.warning,"subtle"),
+                borderRadius:9,padding:"5px 7px",minWidth:48,textAlign:"center"}}>
+                <div style={{fontSize:8,color:colors.textMuted,fontWeight:800,letterSpacing:0.7}}>LIGA</div>
+                <div style={{fontSize:13,color:colors.warning,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center",gap:3}}>
+                  <Trophy size={11}/> {state.league.tier}
+                </div>
+              </div>
+              <div style={{border:`1px solid ${withAlpha(colors.success,"medium")}`,background:withAlpha(colors.success,"subtle"),
+                borderRadius:9,padding:"5px 7px",minWidth:58,textAlign:"center"}}>
+                <div style={{fontSize:8,color:colors.textMuted,fontWeight:800,letterSpacing:0.7}}>PODER</div>
+                <div style={{fontSize:13,color:colors.success,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center",gap:3}}>
+                  <Zap size={11}/> {power}
+                </div>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <div style={{position:"relative",zIndex:1,flex:1,overflowY:"auto",paddingBottom:"calc(64px + env(safe-area-inset-bottom))"}}>
           <AnimatePresence mode="wait">
             <m.div key={tab} initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-8}} transition={{duration:0.18}}>
               {tab==="match"    && <MatchScreen    onToast={notify} onNavigateShop={()=>setTab("shop")} onNavigateTeam={()=>setTab("team")}/>}
@@ -65,8 +99,9 @@ function GameApp() {
         </div>
 
         <nav style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,
-          background:"#040a16",borderTop:"1px solid #0e1830",display:"flex",zIndex:200,padding:"2px 6px",
-          paddingBottom:"calc(2px + env(safe-area-inset-bottom))"}}>
+          background:`linear-gradient(180deg, ${colors.surfaceAlt}, ${colors.bgDeep})`,
+          borderTop:`1px solid ${withAlpha(colors.cyan,"soft")}`,display:"flex",zIndex:200,padding:"2px 6px",
+          paddingBottom:"calc(2px + env(safe-area-inset-bottom))",boxShadow:"0 -14px 30px rgba(0,0,0,0.45)"}}>
           {NAV.map(n=>(
             <BottomNavItem key={n.key} icon={n.icon} label={n.label} active={tab===n.key}
               onClick={()=>setTab(n.key)} badge={n.key==="upgrades" && upgradeAvailable}/>
@@ -77,7 +112,6 @@ function GameApp() {
   );
 }
 
-// Outer component wraps everything in the context provider
 export default function App() {
   return (
     <GameProvider>

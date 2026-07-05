@@ -5,6 +5,7 @@ import { GameAction, PASSIVE_INCOME, BUY_PLAYER, SELL_PLAYER, TOGGLE_SQUAD,
 import { makePlayer } from "../utils/gameLogic";
 import { upgCost } from "../utils/balance";
 import { startNewSeason } from "../utils/league";
+import { pickBalancedLineup } from "../utils/lineup";
 
 export const PLAYER_TEAM_ID = "player";
 const DEFAULT_TEAM_NAME = "Meu Time";
@@ -21,10 +22,13 @@ function ensureStarterRoster(state:GameState): GameState {
   while(roster.length<STARTER_ROSTER_SIZE) roster.push(makePlayer("common"));
 
   const validIds = new Set(roster.map(p=>p.id));
-  const lineup = state.lineup.filter(p=>validIds.has(p.id)).slice(0, STARTER_LINEUP_SIZE);
-  roster.forEach(p=>{
-    if(lineup.length<STARTER_LINEUP_SIZE && !lineup.some(l=>l.id===p.id)) lineup.push(p);
-  });
+  const preserved = state.lineup.filter(p=>validIds.has(p.id)).slice(0, STARTER_LINEUP_SIZE);
+  const usedIds = new Set(preserved.map(p=>p.id));
+  const rest = roster.filter(p=>!usedIds.has(p.id));
+  // Top up the preserved lineup in a position-balanced way rather than just
+  // grabbing the next roster entry (same reasoning as pickBalancedLineup —
+  // avoids padding an old save into e.g. 3 goalkeepers).
+  const lineup = pickBalancedLineup(rest, state.formation, preserved);
 
   return {...state, roster, lineup};
 }
@@ -34,7 +38,7 @@ export function createInitialState(): GameState {
   const roster = createStarterRoster();
   return {
     coins: 6000, diamonds: 50,
-    roster, lineup: roster.slice(0,STARTER_LINEUP_SIZE),
+    roster, lineup: pickBalancedLineup(roster, "4-3-3"),
     formation: "4-3-3",
     upgrades: {attack:0, defense:0, training:0, fans:0},
     teamName: DEFAULT_TEAM_NAME, teamColor: DEFAULT_TEAM_COLOR,

@@ -1,17 +1,24 @@
 export const colors = {
-  bg:            "#070d1a",
-  surface:       "#090f1e",
-  border:        "#151f35",
-  textHeading:   "#e2e8f0",
-  textMuted:     "#2d3f5c",
-  textSecondary: "#475569",
-  textSeparator: "#1e293b",
-  success:       "#4ade80",
-  primary:       "#1d4ed8",
-  primaryLight:  "#60a5fa",
-  danger:        "#f87171",
-  rivalDark:     "#991b1b",
-  warning:       "#fbbf24",
+  bg:            "#070a18",
+  bgDeep:        "#03050d",
+  surface:       "#11182c",
+  surfaceAlt:    "#17213a",
+  panel:         "#0c1224",
+  border:        "#26314f",
+  borderBright:  "#53618b",
+  textHeading:   "#f2f7ff",
+  textMuted:     "#7f8bac",
+  textSecondary: "#aeb9d7",
+  textSeparator: "#34415f",
+  success:       "#8bff4a",
+  primary:       "#2458d8",
+  primaryLight:  "#7cc7ff",
+  danger:        "#ff5d7a",
+  rivalDark:     "#a61e4d",
+  warning:       "#fff06a",
+  cyan:          "#62f0ff",
+  violet:        "#b36bff",
+  pitch:         "#1fb35e",
 };
 
 export const ALPHA = {
@@ -47,7 +54,7 @@ export function readableTextOn(hex:string): string {
 }
 
 export const radii = {
-  card:   12,
+  card:   10,
   button: 9,
   badge:  9,
   tag:    4,
@@ -56,11 +63,13 @@ export const radii = {
 
 export const spacing = {
   cardPadding:   "12px 14px",
-  screenPadding: "16px 14px 8px",
+  screenPadding: "14px 14px 10px",
 };
 
 export const shadows = {
   glow: (color:string, size="16px") => `0 0 ${size} ${withAlpha(color,"strong")}`,
+  panel: "0 14px 28px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.07)",
+  raisedPanel: "0 8px 0 rgba(0,0,0,0.24), 0 16px 28px rgba(0,0,0,0.32)",
 };
 
 // 3D "game button" depth: soft top highlight + solid drop step + colored ambient glow.
@@ -72,10 +81,10 @@ export const elevation = {
 export const type = {
   micro:       { fontSize:10, fontWeight:700, letterSpacing:0.8 },
   eyebrow:     { fontSize:10, fontWeight:700, letterSpacing:1.1 },
-  heading:     { fontSize:18, fontWeight:900, letterSpacing:-0.3 },
+  heading:     { fontSize:18, fontWeight:900, letterSpacing:0 },
   cardTitle:   { fontSize:14, fontWeight:800, letterSpacing:0.2 },
-  statHero:    { fontSize:32, fontWeight:900, letterSpacing:-1 },
-  statLarge:   { fontSize:26, fontWeight:900, letterSpacing:-0.5 },
-  statMedium:  { fontSize:20, fontWeight:900, letterSpacing:-0.5 },
+  statHero:    { fontSize:32, fontWeight:900, letterSpacing:0 },
+  statLarge:   { fontSize:26, fontWeight:900, letterSpacing:0 },
+  statMedium:  { fontSize:20, fontWeight:900, letterSpacing:0 },
   buttonLabel: { fontSize:13, fontWeight:800, letterSpacing:0.4 },
 };

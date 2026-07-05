@@ -30,16 +30,25 @@ function clamp(v:number, min:number, max:number): number {
   return Math.max(min, Math.min(max, v));
 }
 
+// A player fielded outside their real position visibly underperforms — harshest
+// when a goalkeeper plays outfield or vice versa, milder between outfield roles.
+function outOfPositionPenalty(playerPos:PositionKey, slotPos:PositionKey): number {
+  if(playerPos===slotPos) return 1;
+  if(playerPos==="GOL" || slotPos==="GOL") return 0.55;
+  return 0.8;
+}
+
 function fromPlayer(player:Player|undefined, pos:PositionKey, powerScale=1): Pick<SimAgent,"pac"|"sho"|"pas"|"def"|"phy"|"dri"|"ovr"> {
   const base = player ?? POS_DEFAULTS[pos];
+  const scale = powerScale * (player ? outOfPositionPenalty(player.pos, pos) : 1);
   return {
-    pac: clamp(base.pac*powerScale, 12, 99),
-    sho: clamp(base.sho*powerScale, 8, 99),
-    pas: clamp(base.pas*powerScale, 10, 99),
-    def: clamp(base.def*powerScale, 8, 99),
-    phy: clamp(base.phy*powerScale, 10, 99),
-    dri: clamp(base.dri*powerScale, 8, 99),
-    ovr: clamp(base.ovr*powerScale, 10, 99),
+    pac: clamp(base.pac*scale, 12, 99),
+    sho: clamp(base.sho*scale, 8, 99),
+    pas: clamp(base.pas*scale, 10, 99),
+    def: clamp(base.def*scale, 8, 99),
+    phy: clamp(base.phy*scale, 10, 99),
+    dri: clamp(base.dri*scale, 8, 99),
+    ovr: clamp(base.ovr*scale, 10, 99),
   };
 }
 

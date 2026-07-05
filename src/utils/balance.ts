@@ -50,7 +50,10 @@ export function calcPowerBreakdown(lineup:Player[], formation:FormationKey, upgr
   const upgradesTotal = upgrades.attack+upgrades.defense+upgrades.training;
   const upgradeMultiplier = 1+Math.log1p(upgradesTotal)*0.25;
   const fit = positionFit(active, formation);
-  const fitMultiplier = 0.90 + fit*0.15;
+  // Wide range on purpose: fielding players out of position (e.g. extra
+  // goalkeepers pushed into outfield slots) should visibly hurt real power,
+  // not just shave a cosmetic percent or two.
+  const fitMultiplier = 0.70 + fit*0.35;
   const lineupRatio = Math.max(0, Math.min(1, active.length/11));
   const lineupMultiplier = 0.65 + lineupRatio*0.35;
   const total = Math.round(averageOvr*formationMultiplier*upgradeMultiplier*fitMultiplier*lineupMultiplier);

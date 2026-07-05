@@ -5,6 +5,6 @@ interface Props { children:ReactNode; }
 
 export function Screen({children}:Props) {
   return (
-    <div style={{padding:spacing.screenPadding}}>{children}</div>
+    <div style={{padding:spacing.screenPadding,position:"relative",zIndex:1}}>{children}</div>
   );
 }
