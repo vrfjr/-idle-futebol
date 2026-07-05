@@ -1,4 +1,5 @@
 import React from "react";
+import { AnimatePresence, m } from "framer-motion";
 import { Coins } from "lucide-react";
 import { useGame } from "../store/GameContext";
 import { UPGRADE } from "../store/actions";
@@ -8,7 +9,7 @@ import { fmt } from "../utils/helpers";
 import { UpgradeKey } from "../types";
 import { AccentCard } from "../components/AccentCard";
 import { ProgressBar } from "../components/ProgressBar";
-import { Button } from "../components/Button";
+import { GameButton } from "../components/GameButton";
 import { Screen } from "../components/Screen";
 import { colors, radii, withAlpha } from "../styles/tokens";
 
@@ -44,14 +45,21 @@ export function UpgradesScreen({onToast}:Props) {
                   <div style={{fontSize:10,color:colors.textSecondary,marginTop:2}}>{u.desc}</div>
                 </div>
               </div>
-              <div style={{width:36,height:36,borderRadius:radii.badge,background:withAlpha(u.color,"subtle"),border:`1px solid ${withAlpha(u.color,"border")}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:900,color:u.color}}>{lvl}</div>
+              <div style={{width:36,height:36,borderRadius:radii.badge,background:withAlpha(u.color,"subtle"),border:`1px solid ${withAlpha(u.color,"border")}`,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}>
+                <AnimatePresence mode="popLayout">
+                  <m.span key={lvl} initial={{opacity:0,scale:0.4,y:8}} animate={{opacity:1,scale:1,y:0}} transition={{duration:0.25}}
+                    style={{fontSize:16,fontWeight:900,color:u.color}}>
+                    {lvl}
+                  </m.span>
+                </AnimatePresence>
+              </div>
             </div>
             <div style={{marginBottom:10}}>
               <ProgressBar value={(lvl/25)*100} color={u.color}/>
             </div>
-            <Button onClick={()=>doUpgrade(u.key)} color={canAfford?u.color:colors.textMuted} active={canAfford} fullWidth size="md">
+            <GameButton onClick={()=>doUpgrade(u.key)} variant="upgrade" color={u.color} fullWidth size="md" disabled={!canAfford}>
               <span style={{display:"inline-flex",alignItems:"center",gap:5}}>Melhorar — {fmt(cost)} <Coins size={12}/></span>
-            </Button>
+            </GameButton>
           </AccentCard>
         );
       })}

@@ -6,3 +6,8 @@ button{font-family:"Rajdhani",sans-serif;}
 ::-webkit-scrollbar-track{background:transparent;}
 ::-webkit-scrollbar-thumb{background:#131e33;border-radius:2px;}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+button{-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
+.reward-shine{position:absolute;top:0;left:-60%;width:35%;height:100%;pointer-events:none;
+  background:linear-gradient(115deg, transparent, rgba(255,255,255,0.4), transparent);
+  transform:skewX(-18deg);animation:reward-shine 3.6s ease-in-out infinite;}
+@keyframes reward-shine{0%{left:-60%;}35%{left:130%;}100%{left:130%;}}

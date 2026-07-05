@@ -5,7 +5,7 @@ import { BUY_PACK } from "../store/actions";
 import { makePlayer } from "../utils/gameLogic";
 import { PACKS, PackDef } from "../constants/shop";
 import { AccentCard } from "../components/AccentCard";
-import { Button } from "../components/Button";
+import { GameButton } from "../components/GameButton";
 import { Label } from "../components/Label";
 import { Screen } from "../components/Screen";
 import { colors, radii, type, withAlpha } from "../styles/tokens";
@@ -49,9 +49,9 @@ export function ShopScreen({onToast}:Props) {
                   ))}
                 </div>
               </div>
-              <Button onClick={()=>doBuyPack(pk)} color={canAfford?pk.accent:colors.textMuted} active={canAfford} size="md">
+              <GameButton onClick={()=>doBuyPack(pk)} variant="reward" color={pk.accent} size="md" disabled={!canAfford}>
                 <span style={{display:"inline-flex",alignItems:"center",gap:4}}><Gem size={13}/> {pk.cost}</span>
-              </Button>
+              </GameButton>
             </div>
           </AccentCard>
         );
@@ -63,9 +63,9 @@ export function ShopScreen({onToast}:Props) {
       <div style={{background:colors.surface,border:`1px solid ${withAlpha(colors.primary,"soft")}`,borderRadius:radii.card,padding:"13px 14px"}}>
         <div style={{fontSize:13,fontWeight:800,color:colors.primaryLight,marginBottom:3}}>Remover Anúncios</div>
         <div style={{fontSize:10,color:colors.textMuted,marginBottom:10,lineHeight:1.6}}>Compra única. Bônus disponíveis sem precisar assistir.</div>
-        <Button onClick={()=>onToast("Anúncios removidos! Obrigado")} color={colors.primaryLight} active fullWidth size="md">
+        <GameButton onClick={()=>onToast("Anúncios removidos! Obrigado")} variant="primary" fullWidth size="md">
           Comprar — R$ 9,90
-        </Button>
+        </GameButton>
       </div>
     </Screen>
   );

@@ -5,9 +5,10 @@ import { BUY_PLAYER, SELL_PLAYER, REFRESH_MARKET } from "../store/actions";
 import { makePlayer } from "../utils/gameLogic";
 import { fmt } from "../utils/helpers";
 import { PlayerCard } from "../components/PlayerCard";
+import { GameButton } from "../components/GameButton";
 import { Label } from "../components/Label";
 import { Screen } from "../components/Screen";
-import { colors, radii, withAlpha } from "../styles/tokens";
+import { colors, withAlpha } from "../styles/tokens";
 
 const priceLabel = (v:string) => (
   <span style={{display:"inline-flex",alignItems:"center",gap:4}}>{v} <Coins size={12}/></span>
@@ -39,9 +40,9 @@ export function MarketScreen({onToast}:Props) {
     <Screen>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
         <div style={{fontSize:17,fontWeight:900,color:colors.textHeading,letterSpacing:-0.3}}>Mercado</div>
-        <button onClick={doRefresh} style={{background:"transparent",border:`1px solid ${colors.border}`,borderRadius:radii.button,color:colors.textSecondary,fontSize:11,fontWeight:700,cursor:"pointer",padding:"6px 12px",fontFamily:"inherit",letterSpacing:0.3,display:"inline-flex",alignItems:"center",gap:4}}>
+        <GameButton onClick={doRefresh} variant="secondary" size="sm" color={colors.textSecondary}>
           Atualizar — 300 <Coins size={12}/>
-        </button>
+        </GameButton>
       </div>
       <Label>DISPONÍVEIS</Label>
       <div style={{display:"flex",flexDirection:"column",gap:7,marginBottom:20}}>

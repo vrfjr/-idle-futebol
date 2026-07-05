@@ -2,6 +2,7 @@ import React, { ReactNode } from "react";
 import { Player } from "../types";
 import { RARITY } from "../constants/rarity";
 import { colors, radii, withAlpha } from "../styles/tokens";
+import { GameButton } from "./GameButton";
 
 interface Props {
   player:Player; compact?:boolean;
@@ -45,12 +46,10 @@ export function PlayerCard({player,compact=false,onAction,actionLabel,actionColo
         )}
       </div>
       {onAction&&actionLabel&&(
-        <button onClick={onAction} style={{background:"transparent",border:`1px solid ${withAlpha(actionColor,"medium")}`,
-          borderRadius:radii.button,padding:compact?"5px 10px":"7px 12px",color:actionColor,
-          fontSize:compact?10:11,fontWeight:700,cursor:"pointer",flexShrink:0,
-          whiteSpace:"nowrap",fontFamily:"inherit",letterSpacing:0.3}}>
+        <GameButton onClick={onAction} variant="secondary" color={actionColor} size="sm"
+          style={{flexShrink:0, whiteSpace:"nowrap", fontSize:compact?10:11, padding:compact?"5px 10px":"7px 12px"}}>
           {actionLabel}
-        </button>
+        </GameButton>
       )}
     </div>
   );

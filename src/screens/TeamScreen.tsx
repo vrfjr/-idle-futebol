@@ -1,10 +1,12 @@
 import React, { useState } from "react";
+import { AnimatePresence, m } from "framer-motion";
 import { useGame } from "../store/GameContext";
 import { TOGGLE_SQUAD, SET_FORMATION, SET_TEAM_IDENTITY } from "../store/actions";
 import { calcPower } from "../utils/balance";
 import { FORMATIONS_LIST } from "../constants/formations";
 import { FormationKey } from "../types";
 import { PlayerCard } from "../components/PlayerCard";
+import { GameButton } from "../components/GameButton";
 import { Label } from "../components/Label";
 import { Screen } from "../components/Screen";
 import { colors, radii, withAlpha } from "../styles/tokens";
@@ -56,21 +58,24 @@ export function TeamScreen({onToast}:Props) {
         </div>
       </div>
       <Label>FORMAÇÃO</Label>
-      <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:14}}>
+      <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:14}}>
         {FORMATIONS_LIST.map(f=>(
-          <button key={f} onClick={()=>dispatch({type:SET_FORMATION,formation:f as FormationKey})} style={{
-            background:state.formation===f?withAlpha(colors.primary,"subtle"):"transparent",
-            border:`1px solid ${state.formation===f?colors.primary:colors.border}`,
-            borderRadius:radii.button,color:state.formation===f?colors.primaryLight:colors.textMuted,
-            fontSize:11,fontWeight:700,cursor:"pointer",padding:"6px 12px",fontFamily:"inherit",letterSpacing:0.5}}>
+          <GameButton key={f} variant="secondary" size="sm"
+            color={state.formation===f?colors.primary:colors.textMuted}
+            onClick={()=>dispatch({type:SET_FORMATION,formation:f as FormationKey})}>
             {f}
-          </button>
+          </GameButton>
         ))}
       </div>
       <div style={{background:colors.surface,border:`1px solid ${colors.border}`,borderRadius:radii.card,padding:"12px 14px",marginBottom:16,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
         <div>
-          <div style={{fontSize:8,color:colors.textMuted,fontWeight:700,letterSpacing:1.2}}>PODER DO TIME</div>
-          <div style={{fontSize:30,fontWeight:900,color:colors.success,letterSpacing:-1,lineHeight:1,marginTop:2}}>{pwr}</div>
+          <div style={{fontSize:9,color:colors.textMuted,fontWeight:700,letterSpacing:1.2}}>PODER DO TIME</div>
+          <AnimatePresence mode="popLayout">
+            <m.div key={pwr} initial={{opacity:0,y:-4,scale:0.92}} animate={{opacity:1,y:0,scale:1}} transition={{duration:0.25}}
+              style={{fontSize:30,fontWeight:900,color:colors.success,letterSpacing:-1,lineHeight:1,marginTop:2}}>
+              {pwr}
+            </m.div>
+          </AnimatePresence>
         </div>
         <div style={{textAlign:"right"}}>
           <div style={{fontSize:8,color:colors.textMuted,fontWeight:700,letterSpacing:1.2}}>CAMPO / BANCO</div>
