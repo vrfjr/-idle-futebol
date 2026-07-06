@@ -71,6 +71,12 @@ export interface LeagueState {
   fixtures: Fixture[][];
 }
 
+export interface DailyRewardState {
+  lastClaimDayKey: string|null;
+  lastClaimAt: number;
+  streak: number;
+}
+
 export interface GameState {
   coins: number;
   diamonds: number;
@@ -89,6 +95,8 @@ export interface GameState {
   passiveRate: number;
   lastSavedAt: number;
   pendingOfflineReward?: OfflineReward | null;
+  // Absent on old saves — reducer falls back to a fresh daily state.
+  daily?: DailyRewardState;
 }
 
 export interface LiveScore {

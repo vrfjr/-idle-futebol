@@ -1,7 +1,7 @@
 import { GameState, FormationKey, Player } from "../types";
 import { GameAction, PASSIVE_INCOME, BUY_PLAYER, SELL_PLAYER, TOGGLE_SQUAD,
   UPGRADE, REFRESH_MARKET, BUY_PACK, ADD_REWARD, SET_FORMATION, SET_LINEUP, RESOLVE_ROUND,
-  SET_TEAM_IDENTITY, UNLOCK_SPEED_3X, TRAIN_PLAYER, PURCHASE_STORE_OFFER, CLEAR_OFFLINE_REWARD, LOAD } from "./actions";
+  SET_TEAM_IDENTITY, UNLOCK_SPEED_3X, TRAIN_PLAYER, CLAIM_DAILY, PURCHASE_STORE_OFFER, CLEAR_OFFLINE_REWARD, LOAD } from "./actions";
 import { makeMarket, makeMarketPlayer, makePlayer } from "../utils/gameLogic";
 import { passivePerSec, upgCost } from "../utils/balance";
 import { STARTING_LEAGUE_TIER, startNewSeason } from "../utils/league";
@@ -9,6 +9,7 @@ import { pickBalancedLineup } from "../utils/lineup";
 import { calculateOfflineIncome } from "../utils/offlineIncome";
 import { MARKET_REFRESH_COST } from "../constants/economy";
 import { applyTraining, nextTrainingCost } from "../utils/training";
+import { FRESH_DAILY, dailyStatus, dailyRewardFor, dayKey } from "../utils/daily";
 
 export const PLAYER_TEAM_ID = "player";
 const DEFAULT_TEAM_NAME = "Meu Time";
@@ -101,6 +102,7 @@ export function createInitialState(): GameState {
     passiveRate: 10,
     lastSavedAt: Date.now(),
     pendingOfflineReward: null,
+    daily: FRESH_DAILY,
   };
 }
 
@@ -225,6 +227,22 @@ export function gameReducer(state:GameState, action:GameAction): GameState {
         diamonds: cost.currency==="diamonds" ? state.diamonds-cost.amount : state.diamonds,
         roster: state.roster.map(p=>p.id===trained.id ? trained : p),
         lineup: state.lineup.map(p=>p.id===trained.id ? trained : p),
+      };
+    }
+
+    case CLAIM_DAILY: {
+      const status = dailyStatus(state.daily, action.now);
+      if(!status.canClaim) return state;
+      const reward = dailyRewardFor(status.nextStreak, state.league.tier);
+      return {
+        ...state,
+        coins: state.coins+reward.coins,
+        diamonds: state.diamonds+reward.diamonds,
+        daily: {
+          lastClaimDayKey: dayKey(action.now),
+          lastClaimAt: action.now,
+          streak: status.nextStreak,
+        },
       };
     }
 

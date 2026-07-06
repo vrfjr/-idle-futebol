@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { LazyMotion, m, AnimatePresence } from "framer-motion";
-import { CircleDot, Shirt, ShoppingCart, Gem, TrendingUp, LucideIcon, Trophy, Zap, Coins } from "lucide-react";
+import { CircleDot, Shirt, ShoppingCart, Gem, TrendingUp, LucideIcon, Trophy, Zap, Coins, Gift } from "lucide-react";
 import { GameProvider, useGame } from "./store/GameContext";
 import { usePassiveIncome } from "./hooks/usePassiveIncome";
 import { calcPowerBreakdown, passivePerSec, upgCost } from "./utils/balance";
 import { fmt } from "./utils/helpers";
-import { CLEAR_OFFLINE_REWARD } from "./store/actions";
+import { CLEAR_OFFLINE_REWARD, CLAIM_DAILY } from "./store/actions";
+import { dailyStatus, dailyRewardFor } from "./utils/daily";
 import { MatchScreen } from "./screens/MatchScreen";
 import { TeamScreen } from "./screens/TeamScreen";
 import { MarketScreen } from "./screens/MarketScreen";
@@ -50,6 +51,17 @@ function GameApp() {
     notify(`+${fmt(state.pendingOfflineReward.coins)} moedas enquanto voce esteve fora`);
     dispatch({type:CLEAR_OFFLINE_REWARD});
   }, [state.pendingOfflineReward, notify, dispatch]);
+
+  // Re-evaluated on each render; passive income ticks every second so the
+  // banner appears within a second of the day rolling over.
+  const daily = dailyStatus(state.daily, Date.now());
+  const dailyReward = dailyRewardFor(daily.nextStreak, state.league.tier);
+  const claimDaily = ()=>{
+    const now = Date.now();
+    if(!dailyStatus(state.daily, now).canClaim) return;
+    dispatch({type:CLAIM_DAILY, now});
+    notify(`Dia ${daily.nextStreak}: +${fmt(dailyReward.coins)} moedas${dailyReward.diamonds ? ` +${dailyReward.diamonds} diamantes` : ""}`);
+  };
 
   const upgradeAvailable = Object.values(state.upgrades).some(lvl=>state.coins>=upgCost(lvl));
   const powerBreakdown = calcPowerBreakdown(state.lineup, state.formation, state.upgrades);
@@ -115,6 +127,26 @@ function GameApp() {
             </div>
           </div>
         </header>
+
+        {daily.canClaim&&(
+          <button onClick={claimDaily} style={{position:"relative",zIndex:2,margin:"8px 14px 0",padding:"9px 12px",
+            display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,fontFamily:"inherit",cursor:"pointer",
+            background:`linear-gradient(90deg, ${withAlpha(colors.warning,"subtle")}, ${withAlpha(colors.success,"subtle")})`,
+            border:`1px solid ${withAlpha(colors.warning,"medium")}`,borderRadius:12,color:colors.textHeading}}>
+            <span style={{display:"flex",alignItems:"center",gap:8,minWidth:0}}>
+              <Gift size={16} color={colors.warning}/>
+              <span style={{textAlign:"left"}}>
+                <span style={{display:"block",fontSize:9,color:colors.textMuted,fontWeight:900,letterSpacing:1}}>RECOMPENSA DIARIA - DIA {daily.nextStreak}/7</span>
+                <span style={{display:"block",fontSize:12,fontWeight:900,color:colors.warning}}>
+                  +{fmt(dailyReward.coins)} <Coins size={10} style={{display:"inline"}}/>
+                  {dailyReward.diamonds>0&&<span style={{color:colors.cyan}}> +{dailyReward.diamonds} <Gem size={10} style={{display:"inline"}}/></span>}
+                </span>
+              </span>
+            </span>
+            <span style={{flexShrink:0,fontSize:11,fontWeight:900,color:colors.success,border:`1px solid ${withAlpha(colors.success,"medium")}`,
+              borderRadius:8,padding:"5px 10px",background:withAlpha(colors.success,"subtle")}}>COLETAR</span>
+          </button>
+        )}
 
         <div style={{position:"relative",zIndex:1,flex:1,overflowY:"auto",paddingBottom:"calc(64px + env(safe-area-inset-bottom))"}}>
           <AnimatePresence mode="wait">

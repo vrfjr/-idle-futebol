@@ -59,6 +59,20 @@ export const CPU_POWER_SPREAD_RANGE = 0.44;
 // ---- Market ------------------------------------------------------------
 export const MARKET_REFRESH_COST = 300;
 
+// ---- Daily login rewards -------------------------------------------------
+// 7-day cycle, escalating; day 7 is the jackpot. Coin amounts are further
+// multiplied by the same prestige factor as passive income so the calendar
+// stays meaningful in high divisions.
+export const DAILY_REWARDS: {coins:number; diamonds:number}[] = [
+  {coins:1000,  diamonds:0},
+  {coins:2000,  diamonds:0},
+  {coins:2000,  diamonds:3},
+  {coins:4000,  diamonds:0},
+  {coins:4000,  diamonds:5},
+  {coins:8000,  diamonds:0},
+  {coins:10000, diamonds:12},
+];
+
 // ---- Player training ---------------------------------------------------
 // Each training level: +1 to every attribute (recomputed OVR ~+1).
 // Coins only buy the first few levels; everything beyond is diamond-only —
