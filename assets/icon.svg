@@ -1,0 +1,66 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#16204a"/>
+      <stop offset="0.55" stop-color="#0a1130"/>
+      <stop offset="1" stop-color="#04060f"/>
+    </linearGradient>
+    <linearGradient id="pitch" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2ad271"/>
+      <stop offset="1" stop-color="#0e7a3c"/>
+    </linearGradient>
+    <linearGradient id="arrow" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffd84d"/>
+      <stop offset="1" stop-color="#fff3a6"/>
+    </linearGradient>
+    <radialGradient id="ballshade" cx="0.35" cy="0.3" r="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.75" stop-color="#e8edf7"/>
+      <stop offset="1" stop-color="#b9c4da"/>
+    </radialGradient>
+  </defs>
+
+  <!-- background -->
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <!-- subtle diagonal light sweep -->
+  <path d="M0 0 L1024 0 L1024 260 L0 620 Z" fill="#7cc7ff" opacity="0.06"/>
+
+  <!-- pitch arc at the bottom -->
+  <path d="M-80 1024 Q512 640 1104 1024 Z" fill="url(#pitch)"/>
+  <path d="M-80 1024 Q512 668 1104 1024" fill="none" stroke="#ffffff" stroke-opacity="0.35" stroke-width="10"/>
+  <!-- center line + circle hint on the pitch -->
+  <circle cx="512" cy="962" r="86" fill="none" stroke="#ffffff" stroke-opacity="0.3" stroke-width="9"/>
+
+  <!-- growth arrow: starts bottom-left, passes behind the ball and clearly
+       emerges toward the top-right corner -->
+  <path d="M170 810 L430 620" fill="none" stroke="url(#arrow)"
+    stroke-width="64" stroke-linecap="round"/>
+
+  <!-- soccer ball, offset left so the arrow exit reads clearly -->
+  <circle cx="440" cy="500" r="205" fill="url(#ballshade)"/>
+  <circle cx="440" cy="500" r="205" fill="none" stroke="#0a1130" stroke-width="14"/>
+  <!-- center pentagon -->
+  <path d="M440 415 L521 473 L490 568 L390 568 L359 473 Z" fill="#0a1130"/>
+  <!-- edge patches -->
+  <path d="M440 295 L485 368 L440 402 L395 368 Z" fill="#0a1130"/>
+  <path d="M624 434 L637 509 L568 500 L559 453 Z" fill="#0a1130"/>
+  <path d="M256 434 L243 509 L312 500 L321 453 Z" fill="#0a1130"/>
+  <path d="M523 686 L448 705 L448 650 L497 631 Z" fill="#0a1130"/>
+  <path d="M357 686 L432 705 L432 650 L383 631 Z" fill="#0a1130"/>
+  <!-- seams -->
+  <g stroke="#0a1130" stroke-width="10" fill="none" stroke-linecap="round" opacity="0.9">
+    <path d="M440 402 L440 415"/>
+    <path d="M521 473 L568 482"/>
+    <path d="M359 473 L312 482"/>
+    <path d="M490 568 L510 636"/>
+    <path d="M390 568 L370 636"/>
+  </g>
+  <!-- ball highlight -->
+  <ellipse cx="370" cy="408" rx="86" ry="48" fill="#ffffff" opacity="0.35" transform="rotate(-24 370 408)"/>
+
+  <!-- arrow emerging in front, with a bold head at the top-right -->
+  <path d="M560 430 L830 240" fill="none" stroke="url(#arrow)"
+    stroke-width="64" stroke-linecap="round"/>
+  <path d="M672 196 L862 176 L846 366" fill="url(#arrow)" stroke="url(#arrow)"
+    stroke-width="30" stroke-linejoin="round"/>
+</svg>

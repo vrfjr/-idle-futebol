@@ -1,0 +1,16 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#16204a"/>
+      <stop offset="0.55" stop-color="#0a1130"/>
+      <stop offset="1" stop-color="#04060f"/>
+    </linearGradient>
+    <linearGradient id="pitch" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2ad271"/>
+      <stop offset="1" stop-color="#0e7a3c"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <path d="M0 0 L1024 0 L1024 260 L0 620 Z" fill="#7cc7ff" opacity="0.06"/>
+  <path d="M-80 1024 Q512 700 1104 1024 Z" fill="url(#pitch)"/>
+</svg>
