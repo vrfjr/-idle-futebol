@@ -8,6 +8,7 @@ import { fmt } from "./utils/helpers";
 import { CLEAR_OFFLINE_REWARD, CLAIM_DAILY, ROLLOVER_MISSIONS } from "./store/actions";
 import { dailyStatus, dailyRewardFor, dayKey } from "./utils/daily";
 import { claimableAchievements, missionDef } from "./utils/missions";
+import { collectionMultipliers } from "./utils/collection";
 import { MissionsScreen } from "./screens/MissionsScreen";
 import { Target } from "lucide-react";
 import { MatchScreen } from "./screens/MatchScreen";
@@ -86,9 +87,10 @@ function GameApp() {
   }) || claimableAchievements(state).length>0;
 
   const upgradeAvailable = Object.values(state.upgrades).some(lvl=>state.coins>=upgCost(lvl));
-  const powerBreakdown = calcPowerBreakdown(state.lineup, state.formation, state.upgrades, state.legacy?.points ?? 0);
+  const collection = collectionMultipliers(state.roster);
+  const powerBreakdown = calcPowerBreakdown(state.lineup, state.formation, state.upgrades, state.legacy?.points ?? 0, collection.power);
   const power = powerBreakdown.total;
-  const pps = passivePerSec(state.passiveRate, state.upgrades.fans, state.league.tier, state.legacy?.points ?? 0);
+  const pps = passivePerSec(state.passiveRate, state.upgrades.fans, state.league.tier, state.legacy?.points ?? 0, collection.income);
   const coinFlash = useDeltaFlash(state.coins, pps+1);
   const playerTeamId = state.league.teams.find(t=>t.isPlayer)?.id ?? "player";
 

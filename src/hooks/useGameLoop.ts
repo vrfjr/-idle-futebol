@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useGame } from "../store/GameContext";
 import { RESOLVE_ROUND } from "../store/actions";
 import { calcPower } from "../utils/balance";
+import { collectionMultipliers } from "../utils/collection";
 import { resolveRound } from "../utils/league";
 import { LiveScore } from "../types";
 
@@ -28,7 +29,7 @@ export function useGameLoop(speed=1) {
         elapsedRef.current %= 45000;
 
         const s = stateRef.current;
-        const pwr = calcPower(s.lineup, s.formation, s.upgrades, s.legacy?.points ?? 0);
+        const pwr = calcPower(s.lineup, s.formation, s.upgrades, s.legacy?.points ?? 0, collectionMultipliers(s.roster).power);
         const playerId = s.league.teams.find(t=>t.isPlayer)!.id;
         const {league, playerResult, reward, diamondReward, seasonEnded, champion} = resolveRound(s.league, playerId, pwr);
 

@@ -59,6 +59,47 @@ export const CPU_POWER_SPREAD_RANGE = 0.44;
 // ---- Market ------------------------------------------------------------
 export const MARKET_REFRESH_COST = 300;
 
+// ---- Season pass ---------------------------------------------------------
+// Progress = rounds played in the current league season (34 rounds total).
+// Premium track is unlocked with diamonds (the premium currency, which the
+// Store sells via IAP) — standard 2026 idle monetization ladder.
+export const PASS_PREMIUM_COST = 150;
+export interface PassTierDef {
+  rounds: number;                        // rounds played to unlock
+  free: {coins:number; diamonds:number};    // coins scale with prestige
+  premium: {coins:number; diamonds:number};
+}
+export const PASS_TIERS: PassTierDef[] = [
+  {rounds:4,  free:{coins:1500,  diamonds:0}, premium:{coins:3000,  diamonds:5}},
+  {rounds:8,  free:{coins:2500,  diamonds:0}, premium:{coins:5000,  diamonds:5}},
+  {rounds:12, free:{coins:0,     diamonds:2}, premium:{coins:8000,  diamonds:8}},
+  {rounds:16, free:{coins:5000,  diamonds:0}, premium:{coins:12000, diamonds:8}},
+  {rounds:20, free:{coins:7000,  diamonds:0}, premium:{coins:16000, diamonds:10}},
+  {rounds:24, free:{coins:0,     diamonds:4}, premium:{coins:22000, diamonds:12}},
+  {rounds:28, free:{coins:12000, diamonds:0}, premium:{coins:30000, diamonds:15}},
+  {rounds:34, free:{coins:20000, diamonds:5}, premium:{coins:50000, diamonds:25}},
+];
+
+// ---- Collection bonuses ----------------------------------------------------
+// Passive set bonuses for owning rare cards — rewards collecting beyond the
+// starting XI. Applied automatically, no claim step.
+export interface CollectionBonusDef {
+  id: string;
+  label: string;
+  rarity: "rare"|"epic"|"legendary";
+  count: number;
+  incomeBonus: number; // additive, e.g. 0.05 = +5% passive income
+  powerBonus: number;  // additive, e.g. 0.02 = +2% team power
+}
+export const COLLECTION_BONUSES: CollectionBonusDef[] = [
+  {id:"rare5",   label:"5 Raros",      rarity:"rare",      count:5,  incomeBonus:0.05, powerBonus:0},
+  {id:"epic3",   label:"3 Epicos",     rarity:"epic",      count:3,  incomeBonus:0.08, powerBonus:0.02},
+  {id:"epic8",   label:"8 Epicos",     rarity:"epic",      count:8,  incomeBonus:0.12, powerBonus:0.03},
+  {id:"leg1",    label:"1 Lendario",   rarity:"legendary", count:1,  incomeBonus:0.10, powerBonus:0.02},
+  {id:"leg5",    label:"5 Lendarios",  rarity:"legendary", count:5,  incomeBonus:0.20, powerBonus:0.05},
+  {id:"leg11",   label:"11 Lendarios", rarity:"legendary", count:11, incomeBonus:0.35, powerBonus:0.10},
+];
+
 // ---- Legacy (prestige) ---------------------------------------------------
 // Unlocked by winning the Serie 1 title. Resetting the run converts progress
 // into permanent Legacy points: the classic idle loop-extender.

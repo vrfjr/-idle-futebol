@@ -69,6 +69,16 @@ export interface LeagueState {
   teams: LeagueTeam[];
   table: StandingRow[];
   fixtures: Fixture[][];
+  // Unique per generated season; the season pass resets when it changes.
+  // Optional: absent on saves from before the pass existed.
+  seasonId?: string;
+}
+
+export interface SeasonPassState {
+  seasonId: string;
+  premium: boolean;
+  claimedFree: number[];
+  claimedPremium: number[];
 }
 
 // Lifetime counters powering missions and achievements.
@@ -132,6 +142,7 @@ export interface GameState {
   missions?: MissionsState;
   achievementsClaimed?: string[];
   legacy?: LegacyState;
+  seasonPass?: SeasonPassState;
 }
 
 export interface LiveScore {

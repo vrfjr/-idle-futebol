@@ -19,6 +19,8 @@ export const ROLLOVER_MISSIONS = "ROLLOVER_MISSIONS" as const;
 export const CLAIM_MISSION   = "CLAIM_MISSION"   as const;
 export const CLAIM_ACHIEVEMENT = "CLAIM_ACHIEVEMENT" as const;
 export const PRESTIGE_RESET  = "PRESTIGE_RESET"  as const;
+export const UNLOCK_PREMIUM_PASS = "UNLOCK_PREMIUM_PASS" as const;
+export const CLAIM_PASS_TIER = "CLAIM_PASS_TIER" as const;
 export const CLEAR_OFFLINE_REWARD = "CLEAR_OFFLINE_REWARD" as const;
 export const LOAD            = "LOAD"            as const;
 
@@ -43,5 +45,7 @@ export type GameAction =
   | {type:typeof CLAIM_MISSION;  id:string; now:number}
   | {type:typeof CLAIM_ACHIEVEMENT; id:string}
   | {type:typeof PRESTIGE_RESET; now:number}
+  | {type:typeof UNLOCK_PREMIUM_PASS}
+  | {type:typeof CLAIM_PASS_TIER; tierIndex:number; track:"free"|"premium"}
   | {type:typeof CLEAR_OFFLINE_REWARD}
   | {type:typeof LOAD;           payload:Partial<GameState>; loadedAt:number};

@@ -92,6 +92,7 @@ export function startNewSeason(tier:number, playerTeam:{id:string;name:string;co
     teams,
     table: teams.map(t=>emptyRow(t.id)),
     fixtures: generateRoundRobin(teams.map(t=>t.id)),
+    seasonId: `s${safeTier}_${Date.now().toString(36)}_${Math.floor(Math.random()*1e6).toString(36)}`,
   };
 }
 

@@ -3,10 +3,12 @@ import { GameAction, PASSIVE_INCOME, BUY_PLAYER, SELL_PLAYER, TOGGLE_SQUAD,
   UPGRADE, REFRESH_MARKET, BUY_PACK, ADD_REWARD, SET_FORMATION, SET_LINEUP, RESOLVE_ROUND,
   SET_TEAM_IDENTITY, UNLOCK_SPEED_3X, TRAIN_PLAYER, CLAIM_DAILY,
   ROLLOVER_MISSIONS, CLAIM_MISSION, CLAIM_ACHIEVEMENT, PRESTIGE_RESET,
+  UNLOCK_PREMIUM_PASS, CLAIM_PASS_TIER,
   PURCHASE_STORE_OFFER, CLEAR_OFFLINE_REWARD, LOAD } from "./actions";
 import { makeMarket, makeMarketPlayer, makePlayer } from "../utils/gameLogic";
 import { passivePerSec, prestigeOf, upgCost } from "../utils/balance";
-import { LEGACY_ELITE_TITLE_BONUS } from "../constants/economy";
+import { LEGACY_ELITE_TITLE_BONUS, PASS_PREMIUM_COST, PASS_TIERS } from "../constants/economy";
+import { collectionMultipliers, currentPass, passCoins, passTierUnlocked } from "../utils/collection";
 import { STARTING_LEAGUE_TIER, startNewSeason } from "../utils/league";
 import { pickBalancedLineup } from "../utils/lineup";
 import { calculateOfflineIncome } from "../utils/offlineIncome";
@@ -80,7 +82,8 @@ function applyOfflineIncome(state:GameState, loadedAt:number): GameState {
   const reward = calculateOfflineIncome(
     state.lastSavedAt,
     loadedAt,
-    passivePerSec(state.passiveRate, state.upgrades.fans, state.league.tier, state.legacy?.points ?? 0),
+    passivePerSec(state.passiveRate, state.upgrades.fans, state.league.tier, state.legacy?.points ?? 0,
+      collectionMultipliers(state.roster).income),
   );
   return {
     ...state,
@@ -358,6 +361,36 @@ export function gameReducer(state:GameState, action:GameAction): GameState {
         legacy: {points: legacy.points+earned, resets: legacy.resets+1, eliteChampion:false},
         lastSavedAt: action.now,
         pendingOfflineReward: null,
+      };
+    }
+
+    case UNLOCK_PREMIUM_PASS: {
+      const pass = currentPass(state.seasonPass, state.league);
+      if(pass.premium) return state;
+      if(state.diamonds < PASS_PREMIUM_COST) return state;
+      return {
+        ...state,
+        diamonds: state.diamonds-PASS_PREMIUM_COST,
+        seasonPass: {...pass, premium:true},
+      };
+    }
+
+    case CLAIM_PASS_TIER: {
+      const def = PASS_TIERS[action.tierIndex];
+      if(!def) return state;
+      if(!passTierUnlocked(action.tierIndex, state.league)) return state;
+      const pass = currentPass(state.seasonPass, state.league);
+      if(action.track==="premium" && !pass.premium) return state;
+      const claimedList = action.track==="free" ? pass.claimedFree : pass.claimedPremium;
+      if(claimedList.includes(action.tierIndex)) return state;
+      const reward = action.track==="free" ? def.free : def.premium;
+      return {
+        ...state,
+        coins: state.coins+passCoins(reward.coins, state.league.tier),
+        diamonds: state.diamonds+reward.diamonds,
+        seasonPass: action.track==="free"
+          ? {...pass, claimedFree:[...pass.claimedFree, action.tierIndex]}
+          : {...pass, claimedPremium:[...pass.claimedPremium, action.tierIndex]},
       };
     }
 
