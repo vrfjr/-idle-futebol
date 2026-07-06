@@ -18,6 +18,7 @@ export const CLAIM_DAILY     = "CLAIM_DAILY"     as const;
 export const ROLLOVER_MISSIONS = "ROLLOVER_MISSIONS" as const;
 export const CLAIM_MISSION   = "CLAIM_MISSION"   as const;
 export const CLAIM_ACHIEVEMENT = "CLAIM_ACHIEVEMENT" as const;
+export const PRESTIGE_RESET  = "PRESTIGE_RESET"  as const;
 export const CLEAR_OFFLINE_REWARD = "CLEAR_OFFLINE_REWARD" as const;
 export const LOAD            = "LOAD"            as const;
 
@@ -41,5 +42,6 @@ export type GameAction =
   | {type:typeof ROLLOVER_MISSIONS; now:number}
   | {type:typeof CLAIM_MISSION;  id:string; now:number}
   | {type:typeof CLAIM_ACHIEVEMENT; id:string}
+  | {type:typeof PRESTIGE_RESET; now:number}
   | {type:typeof CLEAR_OFFLINE_REWARD}
   | {type:typeof LOAD;           payload:Partial<GameState>; loadedAt:number};

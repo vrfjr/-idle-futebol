@@ -11,11 +11,12 @@ export function usePassiveIncome(): void {
     const rate = state.passiveRate;
     const fans = state.upgrades.fans;
     const tier = state.league.tier;
+    const legacyPoints = state.legacy?.points ?? 0;
     const id = setInterval(()=>{
       if(document.visibilityState==="hidden") return;
-      dispatch({ type: PASSIVE_INCOME, amount: passivePerSec(rate, fans, tier) });
+      dispatch({ type: PASSIVE_INCOME, amount: passivePerSec(rate, fans, tier, legacyPoints) });
     }, 1000);
     return ()=>clearInterval(id);
   // Only re-create when the values that affect the calculation change
-  }, [state.passiveRate, state.upgrades.fans, state.league.tier, dispatch]);
+  }, [state.passiveRate, state.upgrades.fans, state.league.tier, state.legacy?.points, dispatch]);
 }

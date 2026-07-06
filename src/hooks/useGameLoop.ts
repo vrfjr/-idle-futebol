@@ -28,7 +28,7 @@ export function useGameLoop(speed=1) {
         elapsedRef.current %= 45000;
 
         const s = stateRef.current;
-        const pwr = calcPower(s.lineup, s.formation, s.upgrades);
+        const pwr = calcPower(s.lineup, s.formation, s.upgrades, s.legacy?.points ?? 0);
         const playerId = s.league.teams.find(t=>t.isPlayer)!.id;
         const {league, playerResult, reward, diamondReward, seasonEnded, champion} = resolveRound(s.league, playerId, pwr);
 

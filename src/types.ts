@@ -95,6 +95,13 @@ export interface MissionsState {
   entries: MissionEntry[];
 }
 
+export interface LegacyState {
+  points: number;
+  resets: number;
+  // Won the Serie 1 title this run — unlocks the legacy reset.
+  eliteChampion: boolean;
+}
+
 export interface DailyRewardState {
   lastClaimDayKey: string|null;
   lastClaimAt: number;
@@ -124,6 +131,7 @@ export interface GameState {
   stats?: GameStats;
   missions?: MissionsState;
   achievementsClaimed?: string[];
+  legacy?: LegacyState;
 }
 
 export interface LiveScore {

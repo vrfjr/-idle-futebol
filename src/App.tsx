@@ -86,9 +86,9 @@ function GameApp() {
   }) || claimableAchievements(state).length>0;
 
   const upgradeAvailable = Object.values(state.upgrades).some(lvl=>state.coins>=upgCost(lvl));
-  const powerBreakdown = calcPowerBreakdown(state.lineup, state.formation, state.upgrades);
+  const powerBreakdown = calcPowerBreakdown(state.lineup, state.formation, state.upgrades, state.legacy?.points ?? 0);
   const power = powerBreakdown.total;
-  const pps = passivePerSec(state.passiveRate, state.upgrades.fans, state.league.tier);
+  const pps = passivePerSec(state.passiveRate, state.upgrades.fans, state.league.tier, state.legacy?.points ?? 0);
   const coinFlash = useDeltaFlash(state.coins, pps+1);
   const playerTeamId = state.league.teams.find(t=>t.isPlayer)?.id ?? "player";
 

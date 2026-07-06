@@ -4,6 +4,7 @@ import { assignPlayersToSlots, formationTargets, lineupCounts, slotEfficiency } 
 import {
   UPGRADE_COST_BASE, UPGRADE_COST_GROWTH, UPGRADE_POWER_PER_LEVEL,
   FANS_INCOME_PER_LEVEL, PRESTIGE_INCOME_PER_LEVEL,
+  LEGACY_INCOME_PER_POINT, LEGACY_POWER_PER_POINT,
 } from "../constants/economy";
 
 export interface PowerBreakdown {
@@ -14,6 +15,7 @@ export interface PowerBreakdown {
   formationMultiplier:number;
   upgradeMultiplier:number;
   upgradesTotal:number;
+  legacyMultiplier:number;
   counts:Record<PositionKey, number>;
   targets:Record<PositionKey, number>;
 }
@@ -35,7 +37,7 @@ export function positionFit(lineup:Player[], formation:FormationKey): number {
   return total/filled.length;
 }
 
-export function calcPowerBreakdown(lineup:Player[], formation:FormationKey, upgrades:Upgrades): PowerBreakdown {
+export function calcPowerBreakdown(lineup:Player[], formation:FormationKey, upgrades:Upgrades, legacyPoints=0): PowerBreakdown {
   const active = lineup.slice(0, 11);
   const averageOvr = active.length ? active.reduce((s,p)=>s+p.ovr,0)/active.length : 0;
   const f = FORMATION_BONUS[formation] ?? FORMATION_BONUS["4-3-3"];
@@ -51,7 +53,8 @@ export function calcPowerBreakdown(lineup:Player[], formation:FormationKey, upgr
   const fitMultiplier = 0.70 + fit*0.35;
   const lineupRatio = Math.max(0, Math.min(1, active.length/11));
   const lineupMultiplier = 0.65 + lineupRatio*0.35;
-  const total = Math.round(averageOvr*formationMultiplier*upgradeMultiplier*fitMultiplier*lineupMultiplier);
+  const legacyMultiplier = 1 + Math.max(0, legacyPoints)*LEGACY_POWER_PER_POINT;
+  const total = Math.round(averageOvr*formationMultiplier*upgradeMultiplier*fitMultiplier*lineupMultiplier*legacyMultiplier);
 
   return {
     total,
@@ -61,13 +64,14 @@ export function calcPowerBreakdown(lineup:Player[], formation:FormationKey, upgr
     formationMultiplier,
     upgradeMultiplier,
     upgradesTotal,
+    legacyMultiplier,
     counts: lineupCounts(active),
     targets: formationTargets(formation),
   };
 }
 
-export function calcPower(lineup:Player[], formation:FormationKey, upgrades:Upgrades): number {
-  return calcPowerBreakdown(lineup, formation, upgrades).total;
+export function calcPower(lineup:Player[], formation:FormationKey, upgrades:Upgrades, legacyPoints=0): number {
+  return calcPowerBreakdown(lineup, formation, upgrades, legacyPoints).total;
 }
 export function upgCost(level:number): number {
   return Math.floor(UPGRADE_COST_BASE*Math.pow(UPGRADE_COST_GROWTH,level));
@@ -77,7 +81,8 @@ export function upgCost(level:number): number {
 export function prestigeOf(tier:number): number {
   return Math.max(1, Math.min(25, 26-Math.round(tier)));
 }
-export function passivePerSec(rate:number, fans:number, tier=25): number {
+export function passivePerSec(rate:number, fans:number, tier=25, legacyPoints=0): number {
   const prestigeBonus = 1+(prestigeOf(tier)-1)*PRESTIGE_INCOME_PER_LEVEL;
-  return Math.ceil(rate*(1+fans*FANS_INCOME_PER_LEVEL)*prestigeBonus);
+  const legacyBonus = 1+Math.max(0, legacyPoints)*LEGACY_INCOME_PER_POINT;
+  return Math.ceil(rate*(1+fans*FANS_INCOME_PER_LEVEL)*prestigeBonus*legacyBonus);
 }

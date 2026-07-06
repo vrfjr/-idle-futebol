@@ -2,10 +2,11 @@ import { GameState, FormationKey, Player } from "../types";
 import { GameAction, PASSIVE_INCOME, BUY_PLAYER, SELL_PLAYER, TOGGLE_SQUAD,
   UPGRADE, REFRESH_MARKET, BUY_PACK, ADD_REWARD, SET_FORMATION, SET_LINEUP, RESOLVE_ROUND,
   SET_TEAM_IDENTITY, UNLOCK_SPEED_3X, TRAIN_PLAYER, CLAIM_DAILY,
-  ROLLOVER_MISSIONS, CLAIM_MISSION, CLAIM_ACHIEVEMENT,
+  ROLLOVER_MISSIONS, CLAIM_MISSION, CLAIM_ACHIEVEMENT, PRESTIGE_RESET,
   PURCHASE_STORE_OFFER, CLEAR_OFFLINE_REWARD, LOAD } from "./actions";
 import { makeMarket, makeMarketPlayer, makePlayer } from "../utils/gameLogic";
-import { passivePerSec, upgCost } from "../utils/balance";
+import { passivePerSec, prestigeOf, upgCost } from "../utils/balance";
+import { LEGACY_ELITE_TITLE_BONUS } from "../constants/economy";
 import { STARTING_LEAGUE_TIER, startNewSeason } from "../utils/league";
 import { pickBalancedLineup } from "../utils/lineup";
 import { calculateOfflineIncome } from "../utils/offlineIncome";
@@ -14,7 +15,7 @@ import { applyTraining, nextTrainingCost } from "../utils/training";
 import { FRESH_DAILY, dailyStatus, dailyRewardFor, dayKey } from "../utils/daily";
 import { FRESH_STATS, statsOf, missionsForDay, progressMissions, missionDef, missionRewardCoins, achievementMet } from "../utils/missions";
 import { ACHIEVEMENTS } from "../constants/missions";
-import { GameStats } from "../types";
+import { GameStats, LegacyState } from "../types";
 
 export const PLAYER_TEAM_ID = "player";
 const DEFAULT_TEAM_NAME = "Meu Time";
@@ -79,7 +80,7 @@ function applyOfflineIncome(state:GameState, loadedAt:number): GameState {
   const reward = calculateOfflineIncome(
     state.lastSavedAt,
     loadedAt,
-    passivePerSec(state.passiveRate, state.upgrades.fans, state.league.tier),
+    passivePerSec(state.passiveRate, state.upgrades.fans, state.league.tier, state.legacy?.points ?? 0),
   );
   return {
     ...state,
@@ -87,6 +88,15 @@ function applyOfflineIncome(state:GameState, loadedAt:number): GameState {
     lastSavedAt: loadedAt,
     pendingOfflineReward: reward.coins>0 ? reward : null,
   };
+}
+
+export const FRESH_LEGACY: LegacyState = {points:0, resets:0, eliteChampion:false};
+
+// Points a legacy reset would grant right now: divisions climbed this run
+// plus a big bonus for holding the Serie 1 title.
+export function legacyPointsOnReset(state:GameState): number {
+  const base = prestigeOf(state.league.tier)-1;
+  return base + (state.legacy?.eliteChampion ? LEGACY_ELITE_TITLE_BONUS : 0);
 }
 
 // Single place that advances a lifetime counter AND mirrors it into today's
@@ -121,6 +131,7 @@ export function createInitialState(): GameState {
     stats: FRESH_STATS,
     missions: missionsForDay(dayKey(Date.now())),
     achievementsClaimed: [],
+    legacy: FRESH_LEGACY,
   };
 }
 
@@ -220,10 +231,14 @@ export function gameReducer(state:GameState, action:GameAction): GameState {
         if(action.champion) stats = {...stats, titles: stats.titles+1};
       }
       stats = {...stats, bestTier: Math.min(stats.bestTier, action.league.tier)};
+      // Winning the Serie 1 title unlocks the legacy (prestige) reset.
+      const wonElite = !!action.seasonEnded && !!action.champion && state.league.tier===1;
+      const legacy = state.legacy ?? FRESH_LEGACY;
       return {
         ...state,
         stats,
         missions,
+        legacy: wonElite ? {...legacy, eliteChampion:true} : legacy,
         coins: state.coins+action.reward,
         diamonds: state.diamonds+action.diamondReward,
         league: action.league,
@@ -315,6 +330,34 @@ export function gameReducer(state:GameState, action:GameAction): GameState {
         ...state,
         diamonds: state.diamonds+def.rewardDiamonds,
         achievementsClaimed: [...claimed, def.id],
+      };
+    }
+
+    case PRESTIGE_RESET: {
+      const legacy = state.legacy ?? FRESH_LEGACY;
+      // Gate: only a reigning Serie 1 champion can convert the run.
+      if(!legacy.eliteChampion) return state;
+      const earned = legacyPointsOnReset(state);
+      const fresh = createInitialState();
+      // Keep everything meta (identity, premium currency/unlocks, lifetime
+      // stats, achievements, daily streak); reset the run itself.
+      return {
+        ...fresh,
+        teamName: state.teamName,
+        teamColor: state.teamColor,
+        diamonds: state.diamonds,
+        adsRemoved: state.adsRemoved,
+        speed3Unlocked: state.speed3Unlocked,
+        freeNameChangeUsed: state.freeNameChangeUsed,
+        freeColorChangeUsed: state.freeColorChangeUsed,
+        daily: state.daily,
+        stats: state.stats,
+        missions: state.missions,
+        achievementsClaimed: state.achievementsClaimed,
+        league: startNewSeason(STARTING_LEAGUE_TIER, {id:PLAYER_TEAM_ID, name:state.teamName, color:state.teamColor}),
+        legacy: {points: legacy.points+earned, resets: legacy.resets+1, eliteChampion:false},
+        lastSavedAt: action.now,
+        pendingOfflineReward: null,
       };
     }
 

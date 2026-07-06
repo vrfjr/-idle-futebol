@@ -59,6 +59,15 @@ export const CPU_POWER_SPREAD_RANGE = 0.44;
 // ---- Market ------------------------------------------------------------
 export const MARKET_REFRESH_COST = 300;
 
+// ---- Legacy (prestige) ---------------------------------------------------
+// Unlocked by winning the Serie 1 title. Resetting the run converts progress
+// into permanent Legacy points: the classic idle loop-extender.
+// Points on reset = divisions climbed (prestigeOf(tier)) + elite title bonus.
+export const LEGACY_ELITE_TITLE_BONUS = 10;
+// Each point: +2% passive income and +1% team power, forever.
+export const LEGACY_INCOME_PER_POINT = 0.02;
+export const LEGACY_POWER_PER_POINT = 0.01;
+
 // ---- Daily login rewards -------------------------------------------------
 // 7-day cycle, escalating; day 7 is the jackpot. Coin amounts are further
 // multiplied by the same prestige factor as passive income so the calendar
