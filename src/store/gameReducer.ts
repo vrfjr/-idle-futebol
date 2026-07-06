@@ -1,13 +1,14 @@
 import { GameState, FormationKey, Player } from "../types";
 import { GameAction, PASSIVE_INCOME, BUY_PLAYER, SELL_PLAYER, TOGGLE_SQUAD,
   UPGRADE, REFRESH_MARKET, BUY_PACK, ADD_REWARD, SET_FORMATION, SET_LINEUP, RESOLVE_ROUND,
-  SET_TEAM_IDENTITY, UNLOCK_SPEED_3X, PURCHASE_STORE_OFFER, CLEAR_OFFLINE_REWARD, LOAD } from "./actions";
+  SET_TEAM_IDENTITY, UNLOCK_SPEED_3X, TRAIN_PLAYER, PURCHASE_STORE_OFFER, CLEAR_OFFLINE_REWARD, LOAD } from "./actions";
 import { makeMarket, makeMarketPlayer, makePlayer } from "../utils/gameLogic";
 import { passivePerSec, upgCost } from "../utils/balance";
 import { STARTING_LEAGUE_TIER, startNewSeason } from "../utils/league";
 import { pickBalancedLineup } from "../utils/lineup";
 import { calculateOfflineIncome } from "../utils/offlineIncome";
 import { MARKET_REFRESH_COST } from "../constants/economy";
+import { applyTraining, nextTrainingCost } from "../utils/training";
 
 export const PLAYER_TEAM_ID = "player";
 const DEFAULT_TEAM_NAME = "Meu Time";
@@ -205,6 +206,25 @@ export function gameReducer(state:GameState, action:GameAction): GameState {
           ...state.league,
           teams: state.league.teams.map(t=>t.isPlayer ? {...t, name:action.name, color:action.color} : t),
         },
+      };
+    }
+
+    case TRAIN_PLAYER: {
+      const player = state.roster.find(p=>p.id===action.playerId);
+      if(!player) return state;
+      const cost = nextTrainingCost(player);
+      if(!cost) return state;
+      if(cost.currency==="coins" && state.coins<cost.amount) return state;
+      if(cost.currency==="diamonds" && state.diamonds<cost.amount) return state;
+      const trained = applyTraining(player);
+      // Lineup holds its own copies — update both by id or the pitch would
+      // keep fielding the untrained version of the card.
+      return {
+        ...state,
+        coins: cost.currency==="coins" ? state.coins-cost.amount : state.coins,
+        diamonds: cost.currency==="diamonds" ? state.diamonds-cost.amount : state.diamonds,
+        roster: state.roster.map(p=>p.id===trained.id ? trained : p),
+        lineup: state.lineup.map(p=>p.id===trained.id ? trained : p),
       };
     }
 

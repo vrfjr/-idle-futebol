@@ -58,3 +58,17 @@ export const CPU_POWER_SPREAD_RANGE = 0.44;
 
 // ---- Market ------------------------------------------------------------
 export const MARKET_REFRESH_COST = 300;
+
+// ---- Player training ---------------------------------------------------
+// Each training level: +1 to every attribute (recomputed OVR ~+1).
+// Coins only buy the first few levels; everything beyond is diamond-only —
+// deliberate monetization edge for diamond buyers (product decision).
+export const TRAIN_COIN_LEVELS = 3;
+export const TRAIN_COIN_COST_RATIO = 0.3;   // of the player's base price
+export const TRAIN_COIN_COST_GROWTH = 1.8;  // per level
+export const TRAIN_DIAMOND_BASE = 10;
+export const TRAIN_DIAMOND_STEP = 5;        // per diamond level
+// Total training cap by rarity: better cards have more room to grow.
+export const TRAIN_MAX_BY_RARITY: Record<string, number> = {
+  common: 5, rare: 6, epic: 8, legendary: 10,
+};

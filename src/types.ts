@@ -19,6 +19,8 @@ export interface Player {
   ovr: number;
   price: number;
   sellPrice: number;
+  // Training levels applied (absent on pre-training saves = 0).
+  training?: number;
 }
 
 export interface Upgrades {

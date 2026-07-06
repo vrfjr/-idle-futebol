@@ -1,10 +1,12 @@
 import React, { useMemo, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
-import { AlertTriangle, Filter, RotateCcw, Save, Search, Trash2, Wand2 } from "lucide-react";
+import { AlertTriangle, Dumbbell, Filter, Gem, Coins, RotateCcw, Save, Search, Trash2, Wand2 } from "lucide-react";
 import { useGame } from "../store/GameContext";
-import { SET_FORMATION, SET_LINEUP, SET_TEAM_IDENTITY, TOGGLE_SQUAD } from "../store/actions";
+import { SET_FORMATION, SET_LINEUP, SET_TEAM_IDENTITY, TOGGLE_SQUAD, TRAIN_PLAYER } from "../store/actions";
 import { IDENTITY_CHANGE_DIAMOND_COST } from "../store/gameReducer";
 import { calcPowerBreakdown } from "../utils/balance";
+import { nextTrainingCost, trainingCap, trainingLevel } from "../utils/training";
+import { fmt } from "../utils/helpers";
 import { fieldLayout, FORMATIONS_LIST } from "../constants/formations";
 import { FormationKey, Player, PositionKey, RarityKey } from "../types";
 import { ALL_POSITIONS, AssignedFieldSlot, assignPlayersToSlots, pickBalancedLineup, positionStatus, scorePlayerForRole, slotEfficiency, validateLineup } from "../utils/lineup";
@@ -312,12 +314,45 @@ export function TeamScreen({onToast}:Props) {
 
       {selectedPlayer&&(
         <div style={{background:withAlpha(colors.warning,"subtle"),border:`1px solid ${withAlpha(colors.warning,"medium")}`,
-          borderRadius:radii.card,padding:"9px 11px",marginBottom:12,display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
-          <div>
-            <div style={{fontSize:9,color:colors.textMuted,fontWeight:900,letterSpacing:1}}>SELECIONADO</div>
-            <div style={{fontSize:13,color:colors.warning,fontWeight:900}}>{selectedPlayer.name} - {selectedPlayer.pos} OVR {selectedPlayer.ovr}</div>
+          borderRadius:radii.card,padding:"9px 11px",marginBottom:12}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
+            <div>
+              <div style={{fontSize:9,color:colors.textMuted,fontWeight:900,letterSpacing:1}}>SELECIONADO</div>
+              <div style={{fontSize:13,color:colors.warning,fontWeight:900}}>
+                {selectedPlayer.name} - {selectedPlayer.pos} OVR {selectedPlayer.ovr}
+                {trainingLevel(selectedPlayer)>0&&<span style={{color:colors.success}}> +{trainingLevel(selectedPlayer)}</span>}
+              </div>
+            </div>
+            <GameButton variant="secondary" color={colors.textMuted} size="sm" onClick={()=>{ setSelectedId(null); setSelectedSlotNum(null); }}>Cancelar</GameButton>
           </div>
-          <GameButton variant="secondary" color={colors.textMuted} size="sm" onClick={()=>{ setSelectedId(null); setSelectedSlotNum(null); }}>Cancelar</GameButton>
+          {(()=>{
+            const cost = nextTrainingCost(selectedPlayer);
+            const cap = trainingCap(selectedPlayer);
+            const lvl = trainingLevel(selectedPlayer);
+            if(!cost) return (
+              <div style={{fontSize:10,color:colors.textMuted,fontWeight:800,marginTop:8}}>
+                Treino no maximo ({lvl}/{cap})
+              </div>
+            );
+            const isCoins = cost.currency==="coins";
+            const canAfford = isCoins ? state.coins>=cost.amount : state.diamonds>=cost.amount;
+            return (
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginTop:8}}>
+                <div style={{fontSize:10,color:colors.textSecondary,fontWeight:800}}>
+                  Treino {lvl}/{cap} - proximo: +1 em todos atributos
+                  {!isCoins&&<span style={{color:colors.cyan}}> (nivel avancado: diamantes)</span>}
+                </div>
+                <GameButton variant="upgrade" color={isCoins?colors.success:colors.cyan} size="sm" disabled={!canAfford}
+                  onClick={()=>{
+                    if(!canAfford){onToast(isCoins?"Moedas insuficientes":"Diamantes insuficientes",true);return;}
+                    dispatch({type:TRAIN_PLAYER, playerId:selectedPlayer.id});
+                    onToast(`${selectedPlayer.name} treinou (+1 atributos)`);
+                  }}>
+                  <Dumbbell size={12}/> {fmt(cost.amount)} {isCoins?<Coins size={12}/>:<Gem size={12}/>}
+                </GameButton>
+              </div>
+            );
+          })()}
         </div>
       )}
 
