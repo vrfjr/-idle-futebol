@@ -1,7 +1,9 @@
 import { GameState, FormationKey, Player } from "../types";
 import { GameAction, PASSIVE_INCOME, BUY_PLAYER, SELL_PLAYER, TOGGLE_SQUAD,
   UPGRADE, REFRESH_MARKET, BUY_PACK, ADD_REWARD, SET_FORMATION, SET_LINEUP, RESOLVE_ROUND,
-  SET_TEAM_IDENTITY, UNLOCK_SPEED_3X, TRAIN_PLAYER, CLAIM_DAILY, PURCHASE_STORE_OFFER, CLEAR_OFFLINE_REWARD, LOAD } from "./actions";
+  SET_TEAM_IDENTITY, UNLOCK_SPEED_3X, TRAIN_PLAYER, CLAIM_DAILY,
+  ROLLOVER_MISSIONS, CLAIM_MISSION, CLAIM_ACHIEVEMENT,
+  PURCHASE_STORE_OFFER, CLEAR_OFFLINE_REWARD, LOAD } from "./actions";
 import { makeMarket, makeMarketPlayer, makePlayer } from "../utils/gameLogic";
 import { passivePerSec, upgCost } from "../utils/balance";
 import { STARTING_LEAGUE_TIER, startNewSeason } from "../utils/league";
@@ -10,6 +12,9 @@ import { calculateOfflineIncome } from "../utils/offlineIncome";
 import { MARKET_REFRESH_COST } from "../constants/economy";
 import { applyTraining, nextTrainingCost } from "../utils/training";
 import { FRESH_DAILY, dailyStatus, dailyRewardFor, dayKey } from "../utils/daily";
+import { FRESH_STATS, statsOf, missionsForDay, progressMissions, missionDef, missionRewardCoins, achievementMet } from "../utils/missions";
+import { ACHIEVEMENTS } from "../constants/missions";
+import { GameStats } from "../types";
 
 export const PLAYER_TEAM_ID = "player";
 const DEFAULT_TEAM_NAME = "Meu Time";
@@ -84,6 +89,16 @@ function applyOfflineIncome(state:GameState, loadedAt:number): GameState {
   };
 }
 
+// Single place that advances a lifetime counter AND mirrors it into today's
+// mission progress, so a new tracked event can never update one and not the other.
+function bumpStat(state:GameState, stat:keyof GameStats, amount=1): Pick<GameState,"stats"|"missions"> {
+  const stats = statsOf(state);
+  return {
+    stats: {...stats, [stat]: stats[stat]+amount},
+    missions: progressMissions(state.missions, stat, amount),
+  };
+}
+
 // FIX: factory function so makePlayer() runs lazily at app start, not at import time
 export function createInitialState(): GameState {
   const roster = createStarterRoster();
@@ -103,6 +118,9 @@ export function createInitialState(): GameState {
     lastSavedAt: Date.now(),
     pendingOfflineReward: null,
     daily: FRESH_DAILY,
+    stats: FRESH_STATS,
+    missions: missionsForDay(dayKey(Date.now())),
+    achievementsClaimed: [],
   };
 }
 
@@ -119,6 +137,7 @@ export function gameReducer(state:GameState, action:GameAction): GameState {
       if(state.coins < action.player.price) return state;
       return {
         ...state,
+        ...bumpStat(state, "playersBought"),
         coins: state.coins-action.player.price,
         roster: [...state.roster, action.player],
         // Replace the bought card in the market immediately
@@ -148,6 +167,7 @@ export function gameReducer(state:GameState, action:GameAction): GameState {
       if(state.coins < cost) return state;
       return {
         ...state,
+        ...bumpStat(state, "upgradesBought"),
         coins: state.coins-cost,
         upgrades: {...state.upgrades, [action.key]: state.upgrades[action.key]+1},
       };
@@ -164,6 +184,7 @@ export function gameReducer(state:GameState, action:GameAction): GameState {
       if(state.diamonds < action.cost) return state;
       return {
         ...state,
+        ...bumpStat(state, "packsOpened"),
         diamonds: state.diamonds-action.cost,
         roster: [...state.roster, ...action.players],
       };
@@ -186,13 +207,28 @@ export function gameReducer(state:GameState, action:GameAction): GameState {
     case SET_LINEUP:
       return {...state, lineup: action.lineup.slice(0, STARTER_LINEUP_SIZE)};
 
-    case RESOLVE_ROUND:
+    case RESOLVE_ROUND: {
+      let stats = statsOf(state);
+      let missions = state.missions;
+      if(action.result==="win"){
+        const b = bumpStat({...state, stats, missions}, "wins");
+        stats = b.stats!; missions = b.missions;
+      }
+      if(action.seasonEnded){
+        const b = bumpStat({...state, stats, missions}, "seasonsPlayed");
+        stats = b.stats!; missions = b.missions;
+        if(action.champion) stats = {...stats, titles: stats.titles+1};
+      }
+      stats = {...stats, bestTier: Math.min(stats.bestTier, action.league.tier)};
       return {
         ...state,
+        stats,
+        missions,
         coins: state.coins+action.reward,
         diamonds: state.diamonds+action.diamondReward,
         league: action.league,
       };
+    }
 
     case SET_TEAM_IDENTITY: {
       const diamondCost = action.diamondCost ?? 0;
@@ -223,6 +259,7 @@ export function gameReducer(state:GameState, action:GameAction): GameState {
       // keep fielding the untrained version of the card.
       return {
         ...state,
+        ...bumpStat(state, "trainingsDone"),
         coins: cost.currency==="coins" ? state.coins-cost.amount : state.coins,
         diamonds: cost.currency==="diamonds" ? state.diamonds-cost.amount : state.diamonds,
         roster: state.roster.map(p=>p.id===trained.id ? trained : p),
@@ -243,6 +280,41 @@ export function gameReducer(state:GameState, action:GameAction): GameState {
           lastClaimAt: action.now,
           streak: status.nextStreak,
         },
+      };
+    }
+
+    case ROLLOVER_MISSIONS: {
+      const today = dayKey(action.now);
+      if(state.missions?.dayKey===today) return state;
+      return {...state, missions: missionsForDay(today)};
+    }
+
+    case CLAIM_MISSION: {
+      if(!state.missions || state.missions.dayKey!==dayKey(action.now)) return state;
+      const entry = state.missions.entries.find(e=>e.id===action.id);
+      const def = missionDef(action.id);
+      if(!entry || !def || entry.claimed || entry.progress<entry.goal) return state;
+      return {
+        ...state,
+        coins: state.coins+missionRewardCoins(def, state.league.tier),
+        diamonds: state.diamonds+def.rewardDiamonds,
+        missions: {
+          ...state.missions,
+          entries: state.missions.entries.map(e=>e.id===action.id ? {...e, claimed:true} : e),
+        },
+      };
+    }
+
+    case CLAIM_ACHIEVEMENT: {
+      const def = ACHIEVEMENTS.find(a=>a.id===action.id);
+      if(!def) return state;
+      const claimed = state.achievementsClaimed ?? [];
+      if(claimed.includes(def.id)) return state;
+      if(!achievementMet(def, state)) return state;
+      return {
+        ...state,
+        diamonds: state.diamonds+def.rewardDiamonds,
+        achievementsClaimed: [...claimed, def.id],
       };
     }
 

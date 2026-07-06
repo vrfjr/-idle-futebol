@@ -30,9 +30,9 @@ export function useGameLoop(speed=1) {
         const s = stateRef.current;
         const pwr = calcPower(s.lineup, s.formation, s.upgrades);
         const playerId = s.league.teams.find(t=>t.isPlayer)!.id;
-        const {league, playerResult, reward, diamondReward} = resolveRound(s.league, playerId, pwr);
+        const {league, playerResult, reward, diamondReward, seasonEnded, champion} = resolveRound(s.league, playerId, pwr);
 
-        dispatch({type:RESOLVE_ROUND, league, result:playerResult, reward, diamondReward});
+        dispatch({type:RESOLVE_ROUND, league, result:playerResult, reward, diamondReward, seasonEnded, champion});
         setLiveScore({home:0, away:0, min:0});
         return;
       }

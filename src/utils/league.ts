@@ -140,6 +140,9 @@ export interface RoundResolution {
   playerResult: MatchResult;
   reward: number;
   diamondReward: number;
+  // Set when this round closed a season (stats/achievements hook).
+  seasonEnded: boolean;
+  champion: boolean;
 }
 
 const RELEGATION_COUNT = 3;
@@ -171,6 +174,8 @@ export function resolveRound(league:LeagueState, playerId:string, playerPower:nu
       playerResult: "draw",
       reward: 0,
       diamondReward: 0,
+      seasonEnded: false,
+      champion: false,
     };
   }
   const table = league.table.map(r=>({...r}));
@@ -200,12 +205,16 @@ export function resolveRound(league:LeagueState, playerId:string, playerPower:nu
 
   const nextRound = league.round+1;
   let newLeague: LeagueState = {...league, round:nextRound, table};
+  let seasonEnded = false;
+  let champion = false;
 
   if(nextRound>=league.fixtures.length){
     const standings = [...table].sort(compareStandings);
     const playerPos = standings.findIndex(r=>r.teamId===playerId);
+    seasonEnded = true;
+    champion = playerPos===0;
     let nextTier = league.tier;
-    if(playerPos===0) nextTier = Math.max(BEST_LEAGUE_TIER, league.tier-1);
+    if(champion) nextTier = Math.max(BEST_LEAGUE_TIER, league.tier-1);
     else if(playerPos>=standings.length-RELEGATION_COUNT) nextTier = Math.min(STARTING_LEAGUE_TIER, league.tier+1);
     const playerTeam = league.teams.find(t=>t.id===playerId)!;
     newLeague = startNewSeason(nextTier, playerTeam);
@@ -214,5 +223,5 @@ export function resolveRound(league:LeagueState, playerId:string, playerPower:nu
     diamondReward += seasonBonusDiamonds(seasonPrestige);
   }
 
-  return {league:newLeague, playerResult, reward, diamondReward};
+  return {league:newLeague, playerResult, reward, diamondReward, seasonEnded, champion};
 }

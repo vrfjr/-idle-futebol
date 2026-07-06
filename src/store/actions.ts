@@ -15,6 +15,9 @@ export const SET_TEAM_IDENTITY = "SET_TEAM_IDENTITY" as const;
 export const UNLOCK_SPEED_3X = "UNLOCK_SPEED_3X" as const;
 export const TRAIN_PLAYER    = "TRAIN_PLAYER"    as const;
 export const CLAIM_DAILY     = "CLAIM_DAILY"     as const;
+export const ROLLOVER_MISSIONS = "ROLLOVER_MISSIONS" as const;
+export const CLAIM_MISSION   = "CLAIM_MISSION"   as const;
+export const CLAIM_ACHIEVEMENT = "CLAIM_ACHIEVEMENT" as const;
 export const CLEAR_OFFLINE_REWARD = "CLEAR_OFFLINE_REWARD" as const;
 export const LOAD            = "LOAD"            as const;
 
@@ -30,10 +33,13 @@ export type GameAction =
   | {type:typeof ADD_REWARD;     coins:number; diamonds:number}
   | {type:typeof SET_FORMATION;  formation:FormationKey}
   | {type:typeof SET_LINEUP;     lineup:Player[]}
-  | {type:typeof RESOLVE_ROUND;  league:LeagueState; result:MatchResult; reward:number; diamondReward:number}
+  | {type:typeof RESOLVE_ROUND;  league:LeagueState; result:MatchResult; reward:number; diamondReward:number; seasonEnded?:boolean; champion?:boolean}
   | {type:typeof SET_TEAM_IDENTITY; name:string; color:string; diamondCost?:number; markNameChange?:boolean; markColorChange?:boolean}
   | {type:typeof UNLOCK_SPEED_3X; cost:number}
   | {type:typeof TRAIN_PLAYER;   playerId:string}
   | {type:typeof CLAIM_DAILY;    now:number}
+  | {type:typeof ROLLOVER_MISSIONS; now:number}
+  | {type:typeof CLAIM_MISSION;  id:string; now:number}
+  | {type:typeof CLAIM_ACHIEVEMENT; id:string}
   | {type:typeof CLEAR_OFFLINE_REWARD}
   | {type:typeof LOAD;           payload:Partial<GameState>; loadedAt:number};

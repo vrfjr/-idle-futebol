@@ -71,6 +71,30 @@ export interface LeagueState {
   fixtures: Fixture[][];
 }
 
+// Lifetime counters powering missions and achievements.
+export interface GameStats {
+  wins: number;
+  titles: number;
+  seasonsPlayed: number;
+  playersBought: number;
+  packsOpened: number;
+  trainingsDone: number;
+  upgradesBought: number;
+  bestTier: number;
+}
+
+export interface MissionEntry {
+  id: string;
+  goal: number;
+  progress: number;
+  claimed: boolean;
+}
+
+export interface MissionsState {
+  dayKey: string;
+  entries: MissionEntry[];
+}
+
 export interface DailyRewardState {
   lastClaimDayKey: string|null;
   lastClaimAt: number;
@@ -97,6 +121,9 @@ export interface GameState {
   pendingOfflineReward?: OfflineReward | null;
   // Absent on old saves — reducer falls back to a fresh daily state.
   daily?: DailyRewardState;
+  stats?: GameStats;
+  missions?: MissionsState;
+  achievementsClaimed?: string[];
 }
 
 export interface LiveScore {

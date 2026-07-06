@@ -5,8 +5,11 @@ import { GameProvider, useGame } from "./store/GameContext";
 import { usePassiveIncome } from "./hooks/usePassiveIncome";
 import { calcPowerBreakdown, passivePerSec, upgCost } from "./utils/balance";
 import { fmt } from "./utils/helpers";
-import { CLEAR_OFFLINE_REWARD, CLAIM_DAILY } from "./store/actions";
-import { dailyStatus, dailyRewardFor } from "./utils/daily";
+import { CLEAR_OFFLINE_REWARD, CLAIM_DAILY, ROLLOVER_MISSIONS } from "./store/actions";
+import { dailyStatus, dailyRewardFor, dayKey } from "./utils/daily";
+import { claimableAchievements, missionDef } from "./utils/missions";
+import { MissionsScreen } from "./screens/MissionsScreen";
+import { Target } from "lucide-react";
 import { MatchScreen } from "./screens/MatchScreen";
 import { TeamScreen } from "./screens/TeamScreen";
 import { MarketScreen } from "./screens/MarketScreen";
@@ -38,6 +41,7 @@ function GameApp() {
   const [tab, setTab] = useState<Tab>("match");
   const [toast, setToast] = useState<{msg:string;bad:boolean}|null>(null);
   const [showLeague, setShowLeague] = useState(false);
+  const [showMissions, setShowMissions] = useState(false);
 
   usePassiveIncome();
 
@@ -45,6 +49,19 @@ function GameApp() {
     setToast({msg,bad});
     setTimeout(()=>setToast(null), 2600);
   }, []);
+
+  // Refresh today's mission list when the local day changes (checked once a
+  // minute; reducer ignores the dispatch when the day is unchanged).
+  const missionsDayKey = state.missions?.dayKey;
+  useEffect(()=>{
+    const check = ()=>{
+      const now = Date.now();
+      if(missionsDayKey!==dayKey(now)) dispatch({type:ROLLOVER_MISSIONS, now});
+    };
+    check();
+    const id = setInterval(check, 60000);
+    return ()=>clearInterval(id);
+  }, [missionsDayKey, dispatch]);
 
   useEffect(()=>{
     if(!state.pendingOfflineReward?.coins) return;
@@ -62,6 +79,11 @@ function GameApp() {
     dispatch({type:CLAIM_DAILY, now});
     notify(`Dia ${daily.nextStreak}: +${fmt(dailyReward.coins)} moedas${dailyReward.diamonds ? ` +${dailyReward.diamonds} diamantes` : ""}`);
   };
+
+  const missionClaimable = (state.missions?.entries ?? []).some(e=>{
+    const def = missionDef(e.id);
+    return def && !e.claimed && e.progress>=e.goal;
+  }) || claimableAchievements(state).length>0;
 
   const upgradeAvailable = Object.values(state.upgrades).some(lvl=>state.coins>=upgCost(lvl));
   const powerBreakdown = calcPowerBreakdown(state.lineup, state.formation, state.upgrades);
@@ -114,6 +136,15 @@ function GameApp() {
                 <div style={{fontSize:13,color:colors.warning,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center",gap:3}}>
                   <Trophy size={11}/> {state.league.tier}
                 </div>
+              </button>
+              <button onClick={()=>setShowMissions(true)} style={{position:"relative",border:`1px solid ${withAlpha(colors.cyan,"medium")}`,background:withAlpha(colors.cyan,"subtle"),
+                borderRadius:9,padding:"5px 7px",minWidth:40,textAlign:"center",fontFamily:"inherit",cursor:"pointer"}}>
+                <div style={{fontSize:8,color:colors.textMuted,fontWeight:800,letterSpacing:0.7}}>METAS</div>
+                <div style={{fontSize:13,color:colors.cyan,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  <Target size={13}/>
+                </div>
+                {missionClaimable&&<span style={{position:"absolute",top:-3,right:-3,width:10,height:10,borderRadius:"50%",
+                  background:colors.success,border:"2px solid #05070d"}}/>}
               </button>
               <PowerTooltip breakdown={powerBreakdown} align="right">
                 <div style={{border:`1px solid ${withAlpha(colors.success,"medium")}`,background:withAlpha(colors.success,"subtle"),
@@ -172,6 +203,9 @@ function GameApp() {
 
         {showLeague && (
           <LeagueTableScreen league={state.league} playerTeamId={playerTeamId} onClose={()=>setShowLeague(false)}/>
+        )}
+        {showMissions && (
+          <MissionsScreen onClose={()=>setShowMissions(false)} onToast={notify}/>
         )}
       </div>
     </LazyMotion>
