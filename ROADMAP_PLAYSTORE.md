@@ -1,6 +1,63 @@
 # Roadmap Play Store e Android - Football Idle
 
-Ultima revisao: 2026-07-05 (noite)
+Ultima revisao: 2026-07-06
+
+## SESSAO 2026-07-05/06 - O QUE FOI FEITO E O QUE FALTA (retomar daqui)
+
+### Feito nesta sessao (tudo commitado e no GitHub, testes verdes: 13 suites / 51 testes)
+
+- [x] Overhaul de gameplay completo (6 commits): economia rebalanceada
+  (`src/constants/economy.ts` centraliza tudo), treino de jogadores (moedas ate
+  nivel 3, diamantes alem — decisao do dono), recompensa diaria 7 dias, missoes
+  diarias + 14 conquistas (botao METAS no header), prestigio "Legado" (ganhar a
+  Serie 1 permite reset com bonus permanente), passe de temporada (free +
+  premium por 150 diamantes) e bonus de colecao.
+- [x] Fonte Rajdhani agora e local (`@fontsource/rajdhani` em `src/index.tsx`) —
+  antes vinha do Google Fonts e o app offline caia em sans-serif generica.
+- [x] Icone real do app (bola + seta de crescimento): fontes SVG em `pm/assets/`,
+  148 assets Android gerados (`node assets/make-assets.js && npx capacitor-assets
+  generate --android`), icone 512 da loja em `releases/playstore-icon-512.png`.
+- [x] CSS global mobile: sem selecao de texto por long-press, sem overscroll.
+
+### PENDENTE — front/UX (proxima sessao)
+
+- [ ] VALIDAR o icone novo visualmente: gerar preview e olhar
+  (`node -e "require('sharp')('assets/icon.svg').resize(256,256).png().toFile('assets/icon-preview.png')"`).
+  A seta foi redesenhada na ultima edicao do SVG mas o preview novo NAO foi
+  conferido a olho. Se estiver bom, apagar `assets/icon-preview.png`.
+- [ ] GameButton `size="sm"`: area de toque ~34px < 44px recomendado no mobile —
+  adicionar minHeight por tamanho em `src/components/GameButton.tsx`.
+- [ ] PowerTooltip: mostrar os novos multiplicadores (legado e colecao) no
+  detalhamento de poder (`legacyMultiplier` ja existe no PowerBreakdown).
+- [ ] Header esta com 4 caixas (SALDO/LIGA/METAS/PODER) — apertado em telas
+  pequenas; revisar espacamento/tamanho em telas 360px.
+- [ ] Rodar `npm start` e jogar alguns minutos para sentir o novo balanceamento
+  e as telas novas (Metas, passe, Legado) — nada disso foi testado a mao ainda.
+- [ ] Splash usa o logo centralizado gerado por script; conferir no aparelho.
+
+### PENDENTE — jogo/economia
+
+- [ ] Sentir o pacing real do novo balanceamento jogando (curvas foram validadas
+  so por teste automatizado).
+- [ ] Possivel: eventos/temporadas tematicas, ranking/leaderboard (exige backend
+  ou Play Games Services — decidir depois do primeiro release).
+
+### PENDENTE — publicacao (bloqueadores externos)
+
+- [ ] Google validando identidade da conta de desenvolvedor (aguardando).
+- [ ] Apos validacao: gerar AAB novo (`npm run android:build` + `gradlew.bat
+  bundleRelease`) com versionCode 2 — o AAB v1 em releases/ NAO tem os sistemas
+  novos nem o icone. Lembrar de incrementar `versionCode` em
+  `android/app/build.gradle`.
+- [ ] Upload no Play Console (teste interno) + ficha da loja (icone 512 pronto;
+  falta feature graphic 1024x500 e screenshots).
+- [ ] `gh auth login` (usuario roda: `! "/c/Program Files/GitHub CLI/gh.exe"
+  auth login --hostname github.com --git-protocol https --web`) para: tornar o
+  repo privado + publicar politica de privacidade no GitHub Pages.
+- [ ] Integracao AdMob (`@capacitor-community/admob`, decisao ja tomada) +
+  Google Play Billing para a compra "Remover Anuncios" (hoje e toast fake —
+  bloqueador de producao, ok para teste interno).
+- [ ] Testar em aparelho Android real (nunca foi testado).
 
 Este arquivo agora vive DENTRO do repo (`pm/ROADMAP_PLAYSTORE.md`) e e versionado no git.
 Repo do projeto: https://github.com/vrfjr/-idle-futebol (branch `master`).
