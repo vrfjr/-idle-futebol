@@ -10,11 +10,12 @@ export function usePassiveIncome(): void {
   useEffect(()=>{
     const rate = state.passiveRate;
     const fans = state.upgrades.fans;
+    const tier = state.league.tier;
     const id = setInterval(()=>{
       if(document.visibilityState==="hidden") return;
-      dispatch({ type: PASSIVE_INCOME, amount: passivePerSec(rate, fans) });
+      dispatch({ type: PASSIVE_INCOME, amount: passivePerSec(rate, fans, tier) });
     }, 1000);
     return ()=>clearInterval(id);
   // Only re-create when the values that affect the calculation change
-  }, [state.passiveRate, state.upgrades.fans, dispatch]);
+  }, [state.passiveRate, state.upgrades.fans, state.league.tier, dispatch]);
 }

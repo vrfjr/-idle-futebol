@@ -1,5 +1,13 @@
 import { LeagueState, LeagueTeam, StandingRow, Fixture, MatchResult } from "../types";
 import { simulateMatch } from "./gameLogic";
+import {
+  WIN_REWARD_BASE, WIN_REWARD_LINEAR, WIN_REWARD_QUAD,
+  DRAW_REWARD_RATIO, LOSS_REWARD_RATIO, WIN_DIAMOND_CHANCE,
+  SEASON_BONUS_COINS_BASE, SEASON_BONUS_COINS_PER_PRESTIGE,
+  SEASON_BONUS_DIAMONDS_BASE, SEASON_BONUS_DIAMONDS_PER_5_PRESTIGE,
+  CPU_POWER_BASE, CPU_POWER_LINEAR, CPU_POWER_EXP, CPU_POWER_EXP_SCALE,
+  CPU_POWER_SPREAD_MIN, CPU_POWER_SPREAD_RANGE,
+} from "../constants/economy";
 
 const CPU_NAMES = [
   "Atlético Norte", "Vasco da Serra", "Independente FC", "União Litoral",
@@ -25,10 +33,12 @@ function shuffle<T>(arr:T[]): T[] {
   return a;
 }
 
+// Superlinear so top divisions stay a real fight against the new x3.25
+// upgrade ceiling: tier 25 ~29, mid-table ~100, tier 1 ~228 (see economy.ts).
 export function basePower(tier:number): number {
   const clamped = Math.max(BEST_LEAGUE_TIER, Math.min(STARTING_LEAGUE_TIER, Math.round(tier)));
   const prestige = STARTING_LEAGUE_TIER + 1 - clamped;
-  return 26 + prestige*4.5;
+  return CPU_POWER_BASE + prestige*CPU_POWER_LINEAR + Math.pow(prestige, CPU_POWER_EXP)*CPU_POWER_EXP_SCALE;
 }
 
 export function makeCpuTeams(tier:number, count=17): LeagueTeam[] {
@@ -37,7 +47,7 @@ export function makeCpuTeams(tier:number, count=17): LeagueTeam[] {
     id: `cpu${tier}_${i}_${Date.now().toString(36)}${i}`,
     name,
     color: CPU_COLORS[i % CPU_COLORS.length],
-    power: Math.round(basePower(tier) * (0.78 + Math.random()*0.44)),
+    power: Math.round(basePower(tier) * (CPU_POWER_SPREAD_MIN + Math.random()*CPU_POWER_SPREAD_RANGE)),
     isPlayer: false,
   }));
 }
@@ -133,12 +143,24 @@ export interface RoundResolution {
 }
 
 const RELEGATION_COUNT = 3;
+
+// Quadratic growth per division climbed so Serie A wins (~32k) can actually
+// pay for the legendary squads that division demands (~68k per card), instead
+// of the old linear curve that stalled the mid/late game economy.
+export function winReward(prestige:number): number {
+  return Math.round(WIN_REWARD_BASE + WIN_REWARD_LINEAR*prestige + WIN_REWARD_QUAD*prestige*prestige);
+}
+
 // Guaranteed bonus for reaching the end of a season at all — promoted,
 // relegated, or mid-table, doesn't matter. Separate from (and on top of) the
 // normal per-round win/draw/loss reward, and unlike the per-win diamond
 // chance, this diamond amount is small but always granted, not a roll.
-const SEASON_BONUS_COINS = 900;
-const SEASON_BONUS_DIAMONDS = 3;
+export function seasonBonusCoins(prestige:number): number {
+  return SEASON_BONUS_COINS_BASE + SEASON_BONUS_COINS_PER_PRESTIGE*prestige;
+}
+export function seasonBonusDiamonds(prestige:number): number {
+  return SEASON_BONUS_DIAMONDS_BASE + Math.floor(prestige/5)*SEASON_BONUS_DIAMONDS_PER_5_PRESTIGE;
+}
 
 export function resolveRound(league:LeagueState, playerId:string, playerPower:number): RoundResolution {
   const round = league.fixtures[league.round];
@@ -168,8 +190,11 @@ export function resolveRound(league:LeagueState, playerId:string, playerPower:nu
       const my = isHome?hg:ag, opp = isHome?ag:hg;
       playerResult = my>opp ? "win" : my<opp ? "loss" : "draw";
       const prestige = STARTING_LEAGUE_TIER + 1 - league.tier;
-      reward = playerResult==="win" ? 700+prestige*130 : playerResult==="draw" ? 220+prestige*18 : 70+prestige*8;
-      diamondReward = playerResult==="win" && Math.random()<0.18 ? 1 : 0;
+      const win = winReward(prestige);
+      reward = playerResult==="win" ? win
+        : playerResult==="draw" ? Math.round(win*DRAW_REWARD_RATIO)
+        : Math.round(win*LOSS_REWARD_RATIO);
+      diamondReward = playerResult==="win" && Math.random()<WIN_DIAMOND_CHANCE ? 1 : 0;
     }
   });
 
@@ -184,8 +209,9 @@ export function resolveRound(league:LeagueState, playerId:string, playerPower:nu
     else if(playerPos>=standings.length-RELEGATION_COUNT) nextTier = Math.min(STARTING_LEAGUE_TIER, league.tier+1);
     const playerTeam = league.teams.find(t=>t.id===playerId)!;
     newLeague = startNewSeason(nextTier, playerTeam);
-    reward += SEASON_BONUS_COINS;
-    diamondReward += SEASON_BONUS_DIAMONDS;
+    const seasonPrestige = STARTING_LEAGUE_TIER + 1 - league.tier;
+    reward += seasonBonusCoins(seasonPrestige);
+    diamondReward += seasonBonusDiamonds(seasonPrestige);
   }
 
   return {league:newLeague, playerResult, reward, diamondReward};

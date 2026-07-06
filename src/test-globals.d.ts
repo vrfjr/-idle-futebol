@@ -7,7 +7,9 @@ interface TestMatchers {
   toBe(expected:unknown): void;
   toEqual(expected:unknown): void;
   toHaveLength(expected:number): void;
+  toBeGreaterThan(expected:number): void;
   toBeGreaterThanOrEqual(expected:number): void;
+  toBeLessThan(expected:number): void;
   toBeLessThanOrEqual(expected:number): void;
   toBeNull(): void;
   not: TestMatchers;

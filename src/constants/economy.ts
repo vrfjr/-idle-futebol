@@ -1,0 +1,60 @@
+// Central balance sheet for the whole game economy.
+// Every tunable lives here so rebalancing never requires hunting magic
+// numbers across reducers/screens (idle-genre rule: data-driven values).
+//
+// Design notes (2026-07-05 rebalance):
+// - Upgrade POWER benefit is linear per level (was logarithmic while cost grew
+//   exponentially — late levels cost thousands of times more for ~0.5% gains).
+// - Passive income now scales with league prestige, so the idle engine keeps
+//   mattering all game long instead of being frozen at the tier-25 rate.
+// - Round/season rewards grow quadratically with prestige so top divisions
+//   pay for top-rarity squads (win at Serie A ~32k vs legendary card ~68k).
+
+// ---- Upgrades ----------------------------------------------------------
+export const UPGRADE_COST_BASE = 500;
+export const UPGRADE_COST_GROWTH = 1.7;
+export const UPGRADE_MAX_LEVEL = 25;
+// Each attack/defense/training level adds +3% team power, linearly.
+// 75 combined levels -> x3.25 power (old log curve capped out near x2.08
+// but delivered almost all of it in the first 10 cheap levels).
+export const UPGRADE_POWER_PER_LEVEL = 0.03;
+// Each fans level adds +40% passive income (unchanged).
+export const FANS_INCOME_PER_LEVEL = 0.4;
+
+// ---- Passive income ----------------------------------------------------
+export const PASSIVE_BASE_RATE = 10;
+// Promotion multiplies the idle engine: +45% base income per division climbed.
+// Tier 25 -> x1.0, tier 1 -> x11.8.
+export const PRESTIGE_INCOME_PER_LEVEL = 0.45;
+
+// ---- League rewards ----------------------------------------------------
+// winReward(prestige) = BASE + LINEAR*prestige + QUAD*prestige^2
+// prestige 1 (tier 25): 875 coins  |  prestige 25 (tier 1): ~31.8k coins
+export const WIN_REWARD_BASE = 700;
+export const WIN_REWARD_LINEAR = 130;
+export const WIN_REWARD_QUAD = 45;
+export const DRAW_REWARD_RATIO = 0.3;
+export const LOSS_REWARD_RATIO = 0.1;
+export const WIN_DIAMOND_CHANCE = 0.18;
+
+// Season completion bonus also scales with division.
+export const SEASON_BONUS_COINS_BASE = 900;
+export const SEASON_BONUS_COINS_PER_PRESTIGE = 350;
+export const SEASON_BONUS_DIAMONDS_BASE = 3;
+// +1 diamond every 5 divisions climbed.
+export const SEASON_BONUS_DIAMONDS_PER_5_PRESTIGE = 1;
+
+// ---- CPU difficulty ----------------------------------------------------
+// basePower(prestige) = BASE + LINEAR*prestige + prestige^EXP * EXP_SCALE
+// Rescaled for the new x3.25 upgrade ceiling: tier 25 ~29, tier 1 ~228
+// (old curve topped out at 138, trivial against a maxed squad).
+export const CPU_POWER_BASE = 26;
+export const CPU_POWER_LINEAR = 3;
+export const CPU_POWER_EXP = 1.9;
+export const CPU_POWER_EXP_SCALE = 0.28;
+// Per-team random spread around basePower (unchanged).
+export const CPU_POWER_SPREAD_MIN = 0.78;
+export const CPU_POWER_SPREAD_RANGE = 0.44;
+
+// ---- Market ------------------------------------------------------------
+export const MARKET_REFRESH_COST = 300;

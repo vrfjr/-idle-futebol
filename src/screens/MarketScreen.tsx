@@ -4,6 +4,7 @@ import { useGame } from "../store/GameContext";
 import { BUY_PLAYER, SELL_PLAYER, REFRESH_MARKET } from "../store/actions";
 import { makeMarket } from "../utils/gameLogic";
 import { fmt } from "../utils/helpers";
+import { MARKET_REFRESH_COST } from "../constants/economy";
 import { PlayerCard } from "../components/PlayerCard";
 import { GameButton } from "../components/GameButton";
 import { Label } from "../components/Label";
@@ -31,7 +32,7 @@ export function MarketScreen({onToast}:Props) {
 
   const doRefresh = ()=>{
     // Guard in UI; reducer also enforces it
-    if(state.coins<300){onToast("300 moedas necessarias",true);return;}
+    if(state.coins<MARKET_REFRESH_COST){onToast(`${MARKET_REFRESH_COST} moedas necessarias`,true);return;}
     dispatch({type:REFRESH_MARKET,market:makeMarket(state.league.tier)});
     onToast("Mercado atualizado");
   };
@@ -41,7 +42,7 @@ export function MarketScreen({onToast}:Props) {
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
         <div style={{fontSize:17,fontWeight:900,color:colors.textHeading,letterSpacing:-0.3}}>Mercado</div>
         <GameButton onClick={doRefresh} variant="secondary" size="sm" color={colors.textSecondary}>
-          Atualizar - 300 <Coins size={12}/>
+          Atualizar - {MARKET_REFRESH_COST} <Coins size={12}/>
         </GameButton>
       </div>
       <div style={{background:withAlpha(colors.cyan,"subtle"),border:`1px solid ${withAlpha(colors.cyan,"border")}`,

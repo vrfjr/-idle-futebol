@@ -1,6 +1,10 @@
 import { Player, Upgrades, FormationKey, PositionKey } from "../types";
 import { FORMATION_BONUS, fieldLayout } from "../constants/formations";
 import { assignPlayersToSlots, formationTargets, lineupCounts, slotEfficiency } from "./lineup";
+import {
+  UPGRADE_COST_BASE, UPGRADE_COST_GROWTH, UPGRADE_POWER_PER_LEVEL,
+  FANS_INCOME_PER_LEVEL, PRESTIGE_INCOME_PER_LEVEL,
+} from "../constants/economy";
 
 export interface PowerBreakdown {
   total:number;
@@ -37,7 +41,9 @@ export function calcPowerBreakdown(lineup:Player[], formation:FormationKey, upgr
   const f = FORMATION_BONUS[formation] ?? FORMATION_BONUS["4-3-3"];
   const formationMultiplier = (f.atk+f.def)/2;
   const upgradesTotal = upgrades.attack+upgrades.defense+upgrades.training;
-  const upgradeMultiplier = 1+Math.log1p(upgradesTotal)*0.25;
+  // Linear benefit per level: exponential cost buying logarithmic power made
+  // every upgrade past ~10 combined levels a trap (see constants/economy.ts).
+  const upgradeMultiplier = 1+upgradesTotal*UPGRADE_POWER_PER_LEVEL;
   const fit = positionFit(active, formation);
   // Wide range on purpose: fielding players out of position (e.g. extra
   // goalkeepers pushed into outfield slots) should visibly hurt real power,
@@ -64,8 +70,14 @@ export function calcPower(lineup:Player[], formation:FormationKey, upgrades:Upgr
   return calcPowerBreakdown(lineup, formation, upgrades).total;
 }
 export function upgCost(level:number): number {
-  return Math.floor(500*Math.pow(1.7,level));
+  return Math.floor(UPGRADE_COST_BASE*Math.pow(UPGRADE_COST_GROWTH,level));
 }
-export function passivePerSec(rate:number, fans:number): number {
-  return Math.ceil(rate*(1+fans*0.4));
+// prestige = divisions climbed (1 at tier 25 up to 25 at tier 1). Promotion
+// feeds the idle engine so passive income stays relevant across the whole run.
+export function prestigeOf(tier:number): number {
+  return Math.max(1, Math.min(25, 26-Math.round(tier)));
+}
+export function passivePerSec(rate:number, fans:number, tier=25): number {
+  const prestigeBonus = 1+(prestigeOf(tier)-1)*PRESTIGE_INCOME_PER_LEVEL;
+  return Math.ceil(rate*(1+fans*FANS_INCOME_PER_LEVEL)*prestigeBonus);
 }

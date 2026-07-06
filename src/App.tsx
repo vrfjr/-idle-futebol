@@ -54,7 +54,7 @@ function GameApp() {
   const upgradeAvailable = Object.values(state.upgrades).some(lvl=>state.coins>=upgCost(lvl));
   const powerBreakdown = calcPowerBreakdown(state.lineup, state.formation, state.upgrades);
   const power = powerBreakdown.total;
-  const pps = passivePerSec(state.passiveRate, state.upgrades.fans);
+  const pps = passivePerSec(state.passiveRate, state.upgrades.fans, state.league.tier);
   const coinFlash = useDeltaFlash(state.coins, pps+1);
   const playerTeamId = state.league.teams.find(t=>t.isPlayer)?.id ?? "player";
 

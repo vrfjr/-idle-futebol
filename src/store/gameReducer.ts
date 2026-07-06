@@ -7,6 +7,7 @@ import { passivePerSec, upgCost } from "../utils/balance";
 import { STARTING_LEAGUE_TIER, startNewSeason } from "../utils/league";
 import { pickBalancedLineup } from "../utils/lineup";
 import { calculateOfflineIncome } from "../utils/offlineIncome";
+import { MARKET_REFRESH_COST } from "../constants/economy";
 
 export const PLAYER_TEAM_ID = "player";
 const DEFAULT_TEAM_NAME = "Meu Time";
@@ -71,7 +72,7 @@ function applyOfflineIncome(state:GameState, loadedAt:number): GameState {
   const reward = calculateOfflineIncome(
     state.lastSavedAt,
     loadedAt,
-    passivePerSec(state.passiveRate, state.upgrades.fans),
+    passivePerSec(state.passiveRate, state.upgrades.fans, state.league.tier),
   );
   return {
     ...state,
@@ -151,8 +152,8 @@ export function gameReducer(state:GameState, action:GameAction): GameState {
 
     case REFRESH_MARKET: {
       // FIX: coins deducted here in reducer, not split between UI and reducer
-      if(state.coins < 300) return state;
-      return {...state, coins: state.coins-300, market: action.market};
+      if(state.coins < MARKET_REFRESH_COST) return state;
+      return {...state, coins: state.coins-MARKET_REFRESH_COST, market: action.market};
     }
 
     case BUY_PACK: {
